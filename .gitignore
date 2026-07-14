@@ -1,0 +1,25 @@
+# build
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# node (web/extension 이후)
+node_modules/
+dist/
+.next/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# env / secrets — 절대 커밋 금지
+.env
+.env.*
+*.local
+
+# macOS
+.DS_Store
+
+# AI 하네스 — 개인 설정은 공유 안 함
+.claude/settings.local.json
