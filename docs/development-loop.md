@@ -55,23 +55,30 @@
 
 **문서만으로는 보장되지 않는다.** 문서는 협조적인 에이전트에게 *의도*를 알려줄 뿐이다. 잘못 동작하는(또는 혼란한) 에이전트는 표지판이 아니라 벽이 필요하다. 그래서 강제는 **AI 손이 닿기 어려운 곳**에 4겹으로 둔다.
 
-### 보호 경로 (AI가 수정하면 안 되는 것)
-- 계약 테스트 (예: `src/test/**/contract/**` 또는 `@ContractTest`)
-- `.claude/settings.json` (hooks·권한)
-- `scripts/verify.sh` (게이트)
-- CI 워크플로우 설정
+### 보호 경로 (구현자·자동화가 수정하면 안 되는 것)
+- 계약 테스트 (`src/test/**/contract/**`) — **Claude가 작성**하고 **Codex는 건드리지 못한다.** "사람만"이 아니라 "구현자(Codex)로부터 보호"가 정확한 표현.
+- `scripts/verify.sh`, `scripts/check-protected.sh` (게이트)
+- `.claude/**`, `.codex/hooks/**` (hook 설정)
+- `.github/workflows/**` (CI)
 
-### 4겹 강제
-1. **로컬 hook** — 보호 경로 write 시도를 차단하고 사람 승인을 요구한다.
-2. **CI 독립 재검증** — AI가 통제하지 못하는 CI가 `verify.sh`를 다시 돌리고, **보호 경로 diff와 계약 테스트 약화 여부를 검사**한다. 로컬 hook을 우회해도 여기서 걸린다.
-3. **브랜치 보호** — `main` 머지는 사람 승인 필수. AI가 직접 머지 못 한다.
-4. **최소 권한** — AI에게 CI 설정 변경·`main` push 자격을 주지 않는다.
+### 4겹 강제 — 훅은 에이전트별, 진짜 teeth는 agent-agnostic
+훅은 **에이전트마다 따로** 걸린다(Claude 훅은 Codex를 못 막고 그 반대도 마찬가지). 그래서 훅은 1겹일 뿐이고, 실제 방어는 git·CI·브랜치 보호처럼 **누가 변경했든 상관없는(agent-agnostic)** 층이다.
 
-> 핵심: hook 하나는 뚫릴 수 있다. **뚫려도 CI·브랜치 보호가 독립적으로 다시 막는 것**이 설계다. "AI가 hook을 풀지 않겠지?"의 답은 *신뢰가 아니라 이 4겹*이다.
+1. **에이전트 훅 (per-agent, 즉시 차단)** — 구현자 **Codex**의 `.codex/` 훅이 보호 경로 편집을 `apply_patch` 단계에서 차단(PreToolUse)하고 Stop에서 `verify.sh`를 강제한다. *Claude는 계약 테스트의 작성자·리뷰어라 protect/gate 훅을 두지 않는다* (아래 주의).
+2. **git pre-push (agent-agnostic)** — `.githooks/pre-push`가 누가 push하든 `check-protected.sh`로 계약 테스트 삭제를 막는다. (`core.hooksPath=.githooks`)
+3. **CI 독립 재검증 (agent-agnostic, 진짜 게이트)** — AI가 통제 못 하는 CI(`.github/workflows/verify.yml`)가 `verify.sh` + `check-protected.sh`를 다시 돌린다. 로컬 훅·pre-push를 우회(`--no-verify`)해도 여기서 걸린다.
+4. **브랜치 보호 + 최소 권한** — `main` 머지는 사람 PR 승인 필수. AI에게 CI 설정 변경·`main` 직접 push 자격을 주지 않는다.
+
+> 핵심: 훅 하나는 뚫릴 수 있고 한 에이전트에만 걸린다. **뚫려도 CI·브랜치 보호가 독립적으로 다시 막는 것**이 설계다. "AI가 hook을 풀지 않겠지?"의 답은 *신뢰가 아니라 agent-agnostic한 CI·브랜치 보호*다.
+
+> ⚠️ **왜 Claude에는 protect/gate 훅이 없나 (초기 설계 버그 교정):**
+> ① Claude는 계약 테스트를 **작성**한다 → protect-paths 훅을 걸면 자기 계약 테스트를 못 만든다.
+> ② Claude가 방금 쓴 계약 테스트는 **의도적으로 빨강(red)** 이다 → Stop 게이트를 걸면 `verify.sh`가 실패해 턴을 못 끝낸다.
+> 그래서 protect/gate 훅은 **구현자 Codex에만** 둔다.
 
 ## 이 문서를 읽는 AI(Claude·Codex)를 위한 규칙
 
-1. **보호 경로를 수정하지 마라.** 계약 테스트·`verify.sh`·`.claude/settings.json`·CI 설정은 사람만 바꾼다.
+1. **(Codex) 보호 경로를 수정하지 마라.** 계약 테스트·`verify.sh`·`check-protected.sh`·`.codex/**`·CI 설정은 건드리지 않는다. (계약 테스트는 Claude가 작성한다.)
 2. **게이트가 막으면 우회 경로를 찾지 마라.** 다른 파일로 돌아가거나 테스트를 무르게 고쳐 통과시키지 마라. **멈추고 사람에게 물어라.**
 3. **가드레일이 틀렸다고 판단되면 직접 바꾸지 말고** 이유를 사람에게 제시하라. 변경은 사람만 승인한다.
 4. **계약(불변식)이 잘못됐다고 생각되면** 구현을 비틀지 말고 plan 수정을 Claude·사람에게 제안하라.
