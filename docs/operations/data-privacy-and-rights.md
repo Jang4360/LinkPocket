@@ -14,7 +14,7 @@ DELETE_REQUESTED
 → COMPLETED | RETRY | MANUAL_REVIEW
 ```
 
-- 요청 직후 tombstone/권한 차단으로 검색과 RAG에서 먼저 보이지 않게 한다.
+- 요청 직후 tombstone/권한 차단으로 아카이브·검색·연관 추천에서 먼저 보이지 않게 한다.
 - Qdrant/pgvector point는 `(tenantId, linkId, chunkId, modelVersion)`으로 추적 가능하게 만들고 DB 삭제 job과 연결한다.
 - 단계별 멱등 키와 재시도 횟수를 두며, 완료 후 tenant/link filter로 orphan vector가 없는지 검증한다.
 - 감사 로그에는 삭제 대상 본문·URL을 다시 남기지 않고 job ID, 저장소, 결과, 시각, 오류 코드만 보존한다.
@@ -28,7 +28,7 @@ DELETE_REQUESTED
 |---|---|---|
 | 열람·이동 | 본인 재인증 후 저장 링크·태그·상태·생성 데이터 export 요청을 수동 처리 | JSON/CSV export job과 완료 알림 |
 | 정정 | 제목·태그·분류 수정과 원문 재수집 요청 경로 | 변경 이력과 vector/summary 재생성 범위 표시 |
-| 처리정지 | 계정과 background job을 `SUSPENDED`로 전환하고 신규 crawl·RAG·digest 중단 | 진행 중 job 취소/안전 종료와 재개 상태 머신 |
+| 처리정지 | 계정과 background job을 `SUSPENDED`로 전환하고 신규 crawl·요약·검색 색인·digest 중단 | 진행 중 job 취소/안전 종료와 재개 상태 머신 |
 | 동의 철회·탈퇴 | OAuth 연결·모든 session/token family를 폐기한 뒤 삭제 pipeline 실행 | 저장소별 완료 증명과 실패 재처리 |
 | 재가입 | 과거 탈퇴 계정의 token·data가 자동 복원되지 않는 새 identity/session 생성 | 삭제 미완료 계정의 재가입 충돌 테스트 |
 

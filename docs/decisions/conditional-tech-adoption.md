@@ -39,7 +39,7 @@
 | Outbox publisher→Debezium CDC | publisher 튜닝 후에도 publish lag SLO 위반, 장애 복구/순서 요구 증가 | publisher batch·partitioning·재시도 개선 | Outbox publisher 유지 |
 | Kafka consumer 운영 | 독립 replay consumer 3개 이상, DB 보존 밖 replay, partition 순서·대량 backlog 필요 | 단일 pipeline worker와 재색인 command | 실험 branch와 ADR만 남기고 운영 미도입 |
 | 비용용 cache | AI 호출 절감액이 저장·검증·stale 비용보다 큼 | content hash dedup, provider cached input, batch | 결과 cache 미도입 |
-| 성능용 Redis/local cache | 반복 key의 hit ratio와 DB/Qdrant 병목이 측정됨 | 쿼리·인덱스 개선, client cache | 미도입 또는 rate limit만 사용 |
+| 성능용 Redis/local cache | 반복 key의 hit ratio와 DB/pgvector 병목이 측정됨 | 쿼리·인덱스 개선, client cache | 미도입 또는 rate limit만 사용 |
 | 분산 rate limiter | 인스턴스 2개 이상에서 user quota를 일관되게 적용하거나 abuse 한도가 보안 경계가 됨 | 단일 인스턴스 local limiter+gateway limit | Redis Lua/원자 연산 미도입 |
 | Playwright/headless browser | 최근 실패 표본 100개 중 동적 렌더링 필요가 10% 이상이거나 핵심 대상 domain이 반복 실패 | OG/JSON-LD·정적 embedded data·원문 링크만 저장 | 정적 fetch 유지, unsupported 상태 명시 |
 | `@Scheduled`→ShedLock | 애플리케이션 인스턴스가 2개 이상이며 같은 digest 동시 실행 가능 | digest run unique key와 멱등성 | 단일 인스턴스 `@Scheduled` 유지 |

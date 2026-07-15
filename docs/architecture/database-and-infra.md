@@ -5,12 +5,14 @@
 
 ## 1. 모델·트랜잭션 원칙
 
-- 정규화·snapshot/reference·versioning: Link, Content, Chunk, Job, Feedback를 분리하고 parser/model version을 보존한다.
+- 정규화·snapshot/reference·versioning: Link, Category, LinkCategory, Content, Chunk, Job, Digest, OpenEvent를 분리하고 parser/model version을 보존한다.
+- Link는 단일 저장 단위다. 링크 유형을 MVP 도메인 모델로 두지 않고, 사용자가 관리하는 Category와 N:M으로 연결한다.
+- URL·canonical URL·fallback title은 Link 저장 성공의 최소 보장이고, OG 설명·본문·AI 요약·임베딩은 nullable한 후속 결과다. 사용자가 수정한 title/summary는 출처와 함께 보존한다.
 - unique constraint·idempotent write: 사용자+canonical URL, content hash, job idempotency key의 책임을 구분한다.
 - transaction 격리·lock: 여러 worker의 job claim(`SKIP LOCKED`), 사용자 삭제와 vector 삭제 전파.
 - B-Tree·복합 인덱스·selectivity: 사용자별 최신 링크, 상태별 작업, 재처리·digest 후보 조회.
 - keyset pagination: `(user_id, created_at, id)` 기반 archive pagination.
-- N+1과 fetch 전략: 링크 목록에서 tag·summary·status를 가져오는 쿼리 수 제한.
+- N+1과 fetch 전략: 링크 목록에서 category·summary·status를 가져오는 쿼리 수 제한.
 - connection pool·transaction duration: 외부 HTTP·LLM 호출을 transaction 밖으로 빼고 Hikari acquire/usage를 관측한다.
 - migration·rollback: model/parser version 컬럼과 상태 enum을 expand/contract 방식으로 변경한다.
 

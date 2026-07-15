@@ -1,12 +1,12 @@
 # 비동기 파이프라인·상태 머신·처리 상태 노출
 
 > 출처: `learning/cs-learning.md`에서 분리 (2-E 상태 노출 정책·scheduler)
-> 전제: 저장 API는 링크·작업을 기록하고 빠르게 응답, fetch→parse→embed→index는 background. 비동기 구조 진화(Job polling→Outbox→Kafka)는 [decisions/conditional-tech-adoption.md](../decisions/conditional-tech-adoption.md) 참고.
+> 전제: 저장 API는 URL·fallback 제목·링크·작업을 기록하고 빠르게 응답, fetch→parse→summarize→embed→index는 background. 서버 worker의 DB Job polling과 클라이언트의 처리 상태 polling은 대상이 다른 별도 정책이다. 비동기 구조 진화(Job polling→Outbox→Kafka)는 [decisions/conditional-tech-adoption.md](../decisions/conditional-tech-adoption.md) 참고.
 
 ## 1. 상태 머신 (내부)
 
 ```text
-PENDING → FETCHED → CHUNKED → INDEXED
+PENDING → FETCHED → SUMMARIZED → CHUNKED → INDEXED
 (+ 실패·중단·재처리 상태와 허용 전이 정의)
 ```
 
@@ -14,16 +14,19 @@ PENDING → FETCHED → CHUNKED → INDEXED
 - transaction 경계: 링크 저장과 최초 작업 생성은 같은 transaction, HTTP/LLM 호출은 DB transaction 밖.
 - 재시도·DLQ보다 오류 분류: retryable/non-retryable 구분, 최대 횟수와 다음 실행 시각, 수동 재처리.
 - queue·worker capacity: worker 수, HTTP/DB connection, LLM rate limit을 함께 제한한다.
+- 수집이 실패해도 Link는 삭제하지 않는다. URL·fallback title만 보존한 `READY_WITHOUT_CONTENT`와 재시도 가능한 `FAILED`를 구분한다.
 
 ## 2. 처리 상태의 사용자 노출 정책
 
-- API는 내부 단계 전체를 노출하지 않고 `QUEUED`, `PROCESSING`, `READY`, `FAILED`처럼 사용자 행동에 필요한 상태만 제공한다.
+- API는 내부 단계 전체를 노출하지 않고 `QUEUED`, `PROCESSING`, `READY`, `READY_WITHOUT_CONTENT`, `FAILED`처럼 사용자 행동에 필요한 상태만 제공한다.
 - **처리 상태 확인은 polling** (SSE 아님 — [decisions/conditional-tech-adoption.md](../decisions/conditional-tech-adoption.md)). polling 초안은 `1초→2초→4초→8초`, 최대 10초에 jitter를 적용하고 terminal 상태에서 즉시 중단한다. 서버가 `Retry-After`를 반환하면 그 값을 우선한다.
 - 20초를 넘으면 "처리는 계속 진행 중이며 다른 작업을 해도 된다"는 안내와 나중에 확인/알림 선택지를 제공한다.
 - `FAILED`에는 안전한 재시도, 원문만 저장, 삭제 중 가능한 사용자 행동을 오류 유형별로 제공한다.
 - ETag/상태 version을 사용해 변경 없는 polling 응답의 payload를 줄이고, k6에서 완료 인지 지연과 polling RPS를 함께 측정한다.
 
 ## 3. 주간 다이제스트 scheduler·메일 발송
+
+다이제스트는 P1이다. 매주 월요일 오전, 14일 이상 `openedAt`이 없고 snooze·영구 제외가 아닌 Link를 주제별로 묶어 최대 5개 클러스터로 발송한다. `열어보기`는 redirect로 `openedAt`을 기록하고, `다음 주에`는 7일 snooze, `안 볼래요`는 영구 제외다.
 
 | 항목 | LinkPocket 적용과 선택 기준 |
 |---|---|

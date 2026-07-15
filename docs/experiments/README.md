@@ -17,7 +17,7 @@
 - **AI 한계 6종** (환각·보안·성능·회귀·컨텍스트·의존성) — 최소 4개 완료 목표 → [ai-limits-experiments.md](ai-limits-experiments.md)
 - **AI 실패→복구 서사** — 계획에 없던 실제 실패 최소 1건 (cs-learning A섹션 형식)
 - **k6 부하** — workload별 시나리오, arrival rate·p95/p99·error rate 원본
-- **RAG 평가** — golden set 기반 Recall@5·MRR@10, 모델/prompt/index 버전 기록
+- **검색·요약 평가** — golden set 기반 Recall@5·MRR@10, 모델/prompt/index 버전과 요약 표본 기록
 - **조건부 기술 판정** — cs-learning 조건부 도입 표의 신호 측정 (Kafka 전환, cache 도입 등)
 
 ## 실험 목록

@@ -21,7 +21,7 @@
 3. [learning/cs-learning.md](learning/cs-learning.md) — **어떻게 학습하며** 만드는가
 4. [development-loop.md](development-loop.md) — **어떻게 개발하는가** (사람·Claude·Codex 공유 개발 루프 + AI가 지킬 규칙)
 
-⚠️ 설계확정안은 2026-07-01 원본이라 일부(링크 3분류·Kafka·Qdrant)가 대체됨. 충돌 시 decisions·architecture가 우선. 상세는 설계확정안 상단 배너 참고.
+제품 범위는 [설계확정안](product/설계확정안.md)이 단일 기준이다. 기술 선택과 런타임 설계가 충돌하면 `decisions/`·`architecture/`의 최신 결정을 우선한다.
 
 ---
 
@@ -52,7 +52,7 @@ docs/
 │
 ├─ 【개발 후】 운영하고 개선한다 ──────────────
 ├── operations/     운영 정책·runbook·정기 회고
-│   └── data-privacy-and-rights.md · observability-slo-kpi.md · rag-cost-and-rate-limits.md
+│   └── data-privacy-and-rights.md · observability-slo-kpi.md · ai-cost-and-rate-limits.md
 ├── postmortems/    장애 회고·재발 방지 (개별 장애 한 건씩)  ★신규
 │
 └─ 【부속】 ─────────────────────────────────
@@ -69,7 +69,7 @@ docs/
 | 기술을 선택/기각/변경했다 | `decisions/adr-NNN-제목.md` |
 | 설계 산출물(ERD·API 명세·상태머신)을 만들었다 | `architecture/` |
 | 학습한 주제 하나를 정리했다 (개념·적용·증거) | `learning/articles/주제.md` ([템플릿](learning/articles/README.md)) |
-| 측정·비교 실험을 했다 (부하·RAG·AI 실험) | `experiments/exp-NN-제목/` |
+| 측정·비교 실험을 했다 (부하·검색/요약·AI 실험) | `experiments/exp-NN-제목/` |
 | 반복 운영 절차가 생겼다 | `operations/runbook-제목.md` |
 | 주기적 건강검진 회고를 한다 | `operations/retro-*.md` |
 | **장애가 터졌다** | `postmortems/YYYY-MM-DD-제목.md` ([템플릿](postmortems/README.md)) |

@@ -15,8 +15,8 @@
 | Kafka/Redis/SSE 등 조건부 기술 판정 | [decisions/conditional-tech-adoption.md](../decisions/conditional-tech-adoption.md) |
 | AI 한계 6종 실험 | [experiments/ai-limits-experiments.md](../experiments/ai-limits-experiments.md) |
 | 개인정보·이용자 권리·크롤러 정책 | [operations/data-privacy-and-rights.md](../operations/data-privacy-and-rights.md) |
-| OTel·SLO·제품 KPI·RAG CI | [operations/observability-slo-kpi.md](../operations/observability-slo-kpi.md) |
-| LLM 비용·cache·rate limit | [operations/rag-cost-and-rate-limits.md](../operations/rag-cost-and-rate-limits.md) |
+| OTel·SLO·제품 KPI·검색/요약 CI | [operations/observability-slo-kpi.md](../operations/observability-slo-kpi.md) |
+| LLM 비용·cache·rate limit | [operations/ai-cost-and-rate-limits.md](../operations/ai-cost-and-rate-limits.md) |
 | 인증·세션 경계 | [architecture/auth-and-session.md](../architecture/auth-and-session.md) |
 | 비동기 파이프라인·상태 노출·scheduler | [architecture/async-pipeline.md](../architecture/async-pipeline.md) |
 | DB 모델·Neon 제약 | [architecture/database-and-infra.md](../architecture/database-and-infra.md) |
@@ -34,7 +34,7 @@ LinkPocket의 핵심 흐름을 먼저 놓고 후보를 선별했다.
 외부 URL 저장
 → 안전하게 본문 수집
 → 비동기 전처리·임베딩·색인
-→ 검색/RAG 응답
+→ 시맨틱 검색·연관 추천
 → 실제 사용자 운영과 개선
 ```
 
@@ -47,7 +47,7 @@ LinkPocket의 핵심 흐름을 먼저 놓고 후보를 선별했다.
 | P0 | 인증·인가·세션과 API 남용 방지 | web·extension·magic link라는 서로 다른 client와 사용자 데이터 경계를 안전하게 연결하는 기본기 |
 | P0 | 재시도 가능한 비동기 파이프라인 | 크롤링·요약·임베딩은 느리고 실패 가능한 외부 작업이므로 동기 요청에서 분리해야 함 |
 | P0 | DB 모델·트랜잭션·실행 계획 | 링크, 작업 상태, 재처리, 아카이브 조회가 모두 RDB의 정확성과 성능에 의존 |
-| P0 | RAG 검색 품질 평가와 AI 보안 | 단순 API 호출이 아니라 LinkPocket만의 AI 역량을 보여 주는 핵심 |
+| P0 | 검색·요약 품질 평가와 AI 보안 | 단순 API 호출이 아니라 LinkPocket만의 AI 역량을 보여 주는 핵심 |
 | P0 | 관측 가능성·k6·운영 자동화 | 배포 후 1~2개월 운영을 기능 개발과 구분되는 실무 증거로 바꿈 |
 | P0 | AI 개발 하네스와 여섯 가지 한계 실험 | Claude/Codex를 썼다는 사실보다 통제·검증·개선한 능력을 보여 줌 |
 
@@ -55,7 +55,7 @@ Kafka·캐시·JVM/GC·tcpdump·SSE/Netty의 보류·조건부 도입 판단은 
 
 핵심 포트폴리오 문장은 "많이 넣었다"가 아니라 다음이어야 한다.
 
-> LinkPocket의 느리고 실패 가능한 수집·RAG 파이프라인을 테스트 가능한 상태 머신으로 설계하고, 외부 호출·검색 품질·운영 지표를 측정했다. AI 코딩은 명세, 테스트, 권한, 의존성 가드레일 아래에서 사용했고 한계별 전후 결과를 공개했다.
+> LinkPocket의 느리고 실패 가능한 수집·요약·검색 파이프라인을 테스트 가능한 상태 머신으로 설계하고, 외부 호출·검색 품질·운영 지표를 측정했다. AI 코딩은 명세, 테스트, 권한, 의존성 가드레일 아래에서 사용했고 한계별 전후 결과를 공개했다.
 
 ## 2. 선별 기준
 
@@ -80,7 +80,7 @@ Kafka·캐시·JVM/GC·tcpdump·SSE/Netty의 보류·조건부 도입 판단은 
 | 학습할 것 | LinkPocket에 적용할 것 | 검증·기록할 증거 |
 |---|---|---|
 | [P0] context engineering | 짧은 `CLAUDE.md`, architecture map, module별 invariant와 명령어만 상시 제공 | 동일 task의 token, turn, 읽은/수정한 파일 수 전후 |
-| [P0] progressive disclosure와 Skills | `feature-tdd`, `rag-evaluation`, `performance-experiment`, `security-review`처럼 반복 절차만 skill화 | skill 사용 전후 누락 단계·재작업·실패율 |
+| [P0] progressive disclosure와 Skills | `feature-tdd`, `search-evaluation`, `performance-experiment`, `security-review`처럼 반복 절차만 skill화 | skill 사용 전후 누락 단계·재작업·실패율 |
 | [P0] deterministic script의 역할 | lint, test, OpenAPI diff, dependency check, benchmark 결과 수집은 script/CI가 수행 | AI가 매번 해석하던 절차를 자동화한 시간·token 감소 |
 | [P0] 에이전트 루프 설계 (loop engineering) | `plan→구현→검증(script/CI)→관찰→수정`을 한 사이클로 고정. 매 반복 같은 결정론적 게이트로 수렴시키고, 자율 반복(`/loop`류)은 acceptance criteria·turn/시간 예산·hook 가드레일 안에서만 실행 | 수렴까지 반복 수, drift(관련 없는 파일 수정 수), 무한루프 차단 여부, self-correction 성공률 |
 | [P0] hooks와 최소 권한 | secret 파일 읽기, destructive shell, 운영 DB write, 무승인 deploy를 차단 | hook 차단 로그와 허용/거부 정책 문서 |
@@ -102,7 +102,7 @@ Kafka·캐시·JVM/GC·tcpdump·SSE/Netty의 보류·조건부 도입 판단은 
 | [P1] property-based·fuzz testing | URL, redirect, Unicode, HTML, 압축 응답, chunk 경계에 임의 입력 생성 | 사람이 작성한 예제로 찾지 못한 edge case |
 | [P1] mutation testing | 상태 머신과 검색 필터 핵심 로직에 mutation test를 적용 | 테스트가 존재하지만 결함을 못 잡은 지점과 보강 전후 mutation score |
 | [P0] 명세 기반 개발(SDD)의 역할과 한계 | 기능마다 acceptance criteria·불변식·실패 조건을 먼저 쓰고 AI 계획과 대조 | spec/plan/task/구현 사이 누락 건수, 수정 turn 수 |
-| [P0] 결정론적 테스트와 확률적 AI 평가의 차이 | 보안·권한·schema·citation 형식은 항상 PR 차단, RAG 의미 품질은 고정 corpus와 반복 평가 | hard gate와 advisory/nightly gate를 분리한 CI 정책 |
+| [P0] 결정론적 테스트와 확률적 AI 평가의 차이 | 보안·권한·schema는 항상 PR 차단, 검색·요약 의미 품질은 고정 corpus와 반복 평가 | hard gate와 advisory/nightly gate를 분리한 CI 정책 |
 
 중요한 원칙은 **AI가 구현 코드와 테스트를 동시에 마음대로 정의하게 하지 않는 것**이다. 사람이 먼저 행동 계약과 대표 실패 테스트를 정하고, AI는 구현·추가 케이스·리팩터링을 돕게 한다. property-based/fuzz와 mutation test는 P1로 시작하되 반복 edge case나 escaped defect가 관찰되면 해당 경로에 한해 P0로 승격한다.
 
@@ -159,19 +159,19 @@ Kafka·캐시·JVM/GC·tcpdump·SSE/Netty의 보류·조건부 도입 판단은 
 비동기는 "빠르게 보이게 하는 기술"이 아니라 **느리고 실패 가능한 작업을 분리하고, 상태·재시도·복구 책임을 명시하는 설계**로 설명한다.
 
 > 상태 노출 정책·scheduler·메일 발송: [architecture/async-pipeline.md](../architecture/async-pipeline.md)
-> rate limiting 상세·Job→Kafka 진화: [operations/rag-cost-and-rate-limits.md](../operations/rag-cost-and-rate-limits.md), [decisions/conditional-tech-adoption.md](../decisions/conditional-tech-adoption.md)
+> rate limiting 상세·Job→Kafka 진화: [operations/ai-cost-and-rate-limits.md](../operations/ai-cost-and-rate-limits.md), [decisions/conditional-tech-adoption.md](../decisions/conditional-tech-adoption.md)
 
-### F. RAG·검색 품질과 AI 안전성 (4~5주차)
+### F. 검색·요약 품질과 AI 안전성 (4~5주차)
 
 | 학습할 것 | LinkPocket에 적용할 것 | 검증·기록할 증거 |
 |---|---|---|
-| [P0] semantic retrieval과 RAG의 차이 | semantic search와 출처 기반 `Ask My Archive`를 별도 기능·지표로 관리 | retrieval/generation 경계 표현 |
+| [P0] semantic retrieval의 제품 경계 | 저장된 Link를 찾아 결과와 기존 AI 요약을 보여 주고, 답변 생성은 제외 | retrieval 결과와 생성형 답변의 범위 구분 |
 | [P0] HTML 정규화와 chunking | 제목·heading·code block·문단 구조를 보존한 chunk 전략 | chunk size/overlap별 Recall@K·index 크기·비용 |
 | [P0] sparse/BM25, dense, hybrid retrieval | 에러 코드·고유명사 질의와 의미 질의를 분리해 baseline 비교 | query 유형별 Recall@5, MRR@10, zero-result rate |
 | [P0] metadata filter와 권한 경계 | 모든 검색에서 서버가 userId filter를 강제, 모델 입력으로 권한 결정 안 함 | tenant leakage=0인 통합·공격 테스트 |
 | [P1] top-K·threshold·reranking | 후보 수와 reranking 적용 범위를 품질·지연·비용으로 결정 | quality/latency/cost trade-off 표 |
 | [P0] golden dataset과 offline evaluation | 실제 시나리오 50~100개 query-relevant link pair와 hard negative 구축 | 모델·prompt·index 변경 전 회귀 평가 |
-| [P0] grounded generation과 citation | 답변 문장에 source link/chunk id, 근거 부족 시 거절 | citation coverage/correctness, faithfulness, refusal accuracy |
+| [P0] 요약 충실도와 사용자 보정 | 파서·요약 결과와 사용자 수정값을 분리하고, 수정 뒤 해당 Link만 재색인 | 형식·길이·빈 결과, 표본 충실도, 재색인 범위 |
 | [P0] prompt/model/parser versioning | 생성 결과와 입력 hash·모델·prompt·parser version 연결 | 변경 전후 품질과 부분/전체 재색인 범위 |
 | [P1] AI dependency fallback | AI 장애 시 링크 저장·원문 조회·keyword search는 유지 | 모델/vector DB 장애 주입 시 핵심 기능 생존 여부 |
 | [P0] provider rate limit | 요청/토큰 제한, `Retry-After`, 429·5xx·4xx 구분해 model별 concurrency 제한 | 429율, retry amplification, queue wait, 성공까지 호출 수 |
@@ -180,8 +180,8 @@ Kafka·캐시·JVM/GC·tcpdump·SSE/Netty의 보류·조건부 도입 판단은 
 
 `임베딩을 만들었다`보다 `어떤 질의에서 dense 검색이 실패했고 hybrid가 왜 나았는지, 품질 향상과 비용을 어떻게 함께 판단했는지`가 훨씬 강한 AI 프로젝트 증거다.
 
-> RAG CI 게이트: [operations/observability-slo-kpi.md](../operations/observability-slo-kpi.md) 4절
-> LLM 비용·rate limit·cache 정책: [operations/rag-cost-and-rate-limits.md](../operations/rag-cost-and-rate-limits.md)
+> 검색·요약 CI 게이트: [operations/observability-slo-kpi.md](../operations/observability-slo-kpi.md) 4절
+> LLM 비용·rate limit·cache 정책: [operations/ai-cost-and-rate-limits.md](../operations/ai-cost-and-rate-limits.md)
 
 ### G. 관측 가능성·성능·운영 (6~8주차)
 
@@ -189,9 +189,9 @@ Kafka·캐시·JVM/GC·tcpdump·SSE/Netty의 보류·조건부 도입 판단은 
 |---|---|---|
 | [P0] OpenTelemetry와 로그·메트릭·trace의 역할 | requestId/linkId/jobId/traceId로 저장→색인 전체를 연결하고 OTLP로 전송 | 한 실패를 API 로그, job row, metric, trace에서 추적 |
 | [P0] RED/USE와 비즈니스 지표 | API rate/error/duration, pool/CPU/memory와 save→index 성공률·oldest job age | 사용자 영향과 자원 지표를 연결한 대시보드 |
-| [P0] SLI/SLO와 alert | save API, index-ready, search, answer에 소수의 SLO 설정 | alert가 임계값이 아니라 사용자 영향과 연결된 근거 |
+| [P0] SLI/SLO와 alert | save API, index-ready, search, 연관 추천에 소수의 SLO 설정 | alert가 임계값이 아니라 사용자 영향과 연결된 근거 |
 | [P0] 제품 KPI와 기술 SLO의 연결 | 다시 열람·검색 성공·retention·digest CTR을 기술 실패율·지연과 cohort로 관찰 | 기능이 빠른데 안 쓰이는 경우와 느려서 이탈한 경우 구분 |
-| [P0] k6 workload modeling | 저장 burst, archive/search, RAG 질의, 재색인을 서로 다른 시나리오로 실행 | arrival rate, 데이터 크기, p50/p95/p99, error rate 원본 |
+| [P0] k6 workload modeling | 저장 burst, archive/search, 연관 추천, 재색인을 서로 다른 시나리오로 실행 | arrival rate, 데이터 크기, p50/p95/p99, error rate 원본 |
 | [P1] profiling과 한 변수 실험 | 느린 경로를 SQL plan, JFR, HTTP/pool metric 중 증거가 가리키는 도구로 분석 | baseline→가설→한 변수 변경→재측정 보고서 |
 | [P1] dependency fault injection | fetch origin, DB, vector DB, embedding/LLM에 지연·429·5xx·중단 주입 | retry amplification, queue 회복 시간, graceful degradation |
 | [P0] 배포·rollback·migration | CI test→image scan→deploy→smoke test, feature flag와 rollback | 실패 배포 또는 리허설의 복구 시간·절차 |
@@ -229,7 +229,7 @@ Kafka·캐시·JVM/GC·tcpdump·SSE/Netty의 보류·조건부 도입 판단은 
 | 2 | 안전한 URL fetcher | HTTP 흐름, SSRF, timeout/retry/pool | 보안 공격표, 외부 장애 integration test |
 | 3 | 비동기 처리 pipeline | 상태 머신, transaction, idempotency, backpressure | 중복·crash·재시도 시나리오 |
 | 4 | semantic/hybrid search | chunking, dense/BM25/hybrid, tenant filter | 50개 이상 golden set과 Recall/MRR |
-| 5 | Ask My Archive 또는 digest 하나 | grounded RAG, citation, prompt injection | 품질·보안·비용 eval report |
+| 5 | P1 주간 다이제스트 | 미열람 후보·클러스터링·snooze·메일 안전성 | 품질·보안·비용 eval report |
 | 6 | private alpha 배포 | 핵심 저장·검색, 최소 OTel, smoke test, backup 확인 | alpha 사용자 흐름과 첫 48시간 실패 목록 |
 | 7 | 운영 기반 보강 | OTel dashboard, 비용 알람, k6, rollback·삭제 전파 리허설 | SLO 초안, runbook, 1주 운영 회고 |
 | 8 | 공개 출시와 실험 1개 | 디스콰이엇 공개, Kafka 진화·AI 한계·MCP 중 하나만 심화 | ADR, 재현 script, 원본 수치, 출시 회고 |

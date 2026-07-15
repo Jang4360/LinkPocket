@@ -9,7 +9,7 @@
 | AI 한계 | LinkPocket 실험 | 가드레일·개선 | 비교 지표 |
 |---|---|---|---|
 | 환각 | 존재하지 않는 parser/API·잘못된 상태 전이를 AI가 제안하는지 관찰 | OpenAPI·schema·type system·contract/integration test, 문서 출처 요구 | compile/test 실패, 가짜 API 수, 수정 turn |
-| 보안 취약점 | URL fetcher와 RAG에 SSRF·간접 prompt injection·tenant leakage 공격 | OWASP 체크리스트, 서버 강제 권한 필터, secret/tool 격리, 보안 회귀 테스트 | 공격 성공률, 차단 단계, false positive |
+| 보안 취약점 | URL fetcher와 요약·검색 경로에 SSRF·간접 prompt injection·tenant leakage 공격 | OWASP 체크리스트, 서버 강제 권한 필터, secret/tool 격리, 보안 회귀 테스트 | 공격 성공률, 차단 단계, false positive |
 | 성능 무지 | archive N+1, 전체 메모리 로딩, 과도한 동시 fetch, 비효율 chunk 비교 | k6, query plan, JFR/pool metric으로 병목을 먼저 특정 | p95/p99, SQL 수, allocation, pool wait, 429 |
 | 회귀 버그 | parser 또는 상태 머신 수정 뒤 기존 URL 유형·재처리가 깨지는지 관찰 | TDD, golden fixture, integration/E2E, mutation test, CI | 회귀 검출률, CI 차단 수, escaped defect |
 | 컨텍스트 한계 | 전체 repo를 던진 작업과 module context+spec+skill 작업 비교 | context map, ADR index, scoped instruction, progressive disclosure | token, turn, 소요 시간, 불필요 수정 파일 |

@@ -1,6 +1,6 @@
 # LLM 비용·rate limit·cache 운영 정책
 
-> 출처: `learning/cs-learning.md`에서 분리 (2-F LLM rate limit·비용·cache, 2-E 자체 API rate limiting)
+> 출처: `learning/cs-learning.md`에서 분리 (LLM rate limit·비용·cache, 자체 API rate limiting)
 
 ## 1. LLM provider rate limit·비용 예산 운영
 
@@ -11,7 +11,7 @@
 | 일반 4xx | 자동 재시도하지 않고 schema·권한·입력 문제로 분류 | 수정 가능한 입력이면 안내, 아니면 원문만 저장 |
 | 월 예산 70% | 알람과 일별 비용 예측 갱신 | 변화 없음 |
 | 월 예산 90% | 비핵심 자동 요약/digest 축소, 저비용 모델·batch 검토 | 핵심 검색·원문 저장 유지 |
-| 월 예산 100% | 관리자가 명시적으로 해제하기 전 고비용 generation 중단 | keyword/hybrid search와 기존 결과로 fallback |
+| 월 예산 100% | 관리자가 명시적으로 해제하기 전 신규 요약·임베딩 생성 중단 | keyword/hybrid search와 기존 결과로 fallback |
 
 70/90/100%는 최초 운영 가설이며 사용자 수와 실제 단가를 보고 ADR에서 조정한다. token bucket/semaphore는 model별 RPM·TPM과 평균 token을 기준으로 잡고, HTTP worker 수와 별도로 제한한다.
 
@@ -23,7 +23,7 @@
 |---|---|---|---|
 | 비용 절감 | summary·embedding 결과 | hit ratio가 낮아도 `절감 호출 비용 > 저장·정합성 비용`이면 도입 | `contentHash+modelVersion+promptVersion`; URL만 key로 쓰지 않음 |
 | 비용 절감 | query embedding | 반복 질의의 embedding 비용·latency가 의미 있을 때 | normalized query+embedding model version, 개인정보가 포함된 query의 공유 cache 금지 |
-| 성능 개선 | archive/search 결과 | DB/Qdrant 병목과 반복 조회가 측정될 때 | user/filters/indexVersion, 짧은 TTL·삭제 전파 |
+| 성능 개선 | archive/search 결과 | DB/pgvector 병목과 반복 조회가 측정될 때 | user/filters/indexVersion, 짧은 TTL·삭제 전파 |
 | 계산 절감 | canonicalization/parser metadata | profiling에서 반복 계산이 보일 때 bounded local cache | canonicalization rule/parser version |
 
 같은 URL도 본문이 바뀔 수 있으므로 ETag/Last-Modified conditional fetch 또는 재검증 주기 없이 과거 summary를 영구 재사용하지 않는다.
@@ -34,8 +34,8 @@
 |---|---|---|---|
 | 로그인·magic link 요청 | IP+정규화 계정의 sliding window, 점진적 지연 | 계정 존재 여부를 숨긴 동일 응답, `Retry-After`, 보안 event | 성공/실패율, false lockout, 공격 IP 분포 |
 | 링크 저장 | user+route token bucket, 비로그인은 IP 보조 한도 | 429, 기존 작업 상태 반환, 같은 URL 중복은 멱등 처리 | 허용 burst, queue 유입, 정상 사용자 차단률 |
-| 검색 | user token bucket | 429와 재시도 시점 | p95, Qdrant 부하, 사용자별 burst |
-| RAG generation | user+model quota와 동시 실행 semaphore | keyword/hybrid search fallback | token cost, 429, queue wait |
+| 검색 | user token bucket | 429와 재시도 시점 | p95, pgvector 부하, 사용자별 burst |
+| 요약·임베딩 작업 | user+model quota와 동시 실행 semaphore | 링크·기존 결과·keyword/hybrid search 유지 | token cost, 429, queue wait |
 | OAuth callback/refresh | session/token family 단위 replay 제한 | family 폐기 또는 재인증 | reuse detection과 공격 재현 |
 
 - 단일 인스턴스 alpha는 in-memory limiter로 시작할 수 있지만 재시작·다중 인스턴스에서 정확도가 필요하면 Redis로 이동한다. (도입 판정: [decisions/conditional-tech-adoption.md](../decisions/conditional-tech-adoption.md))

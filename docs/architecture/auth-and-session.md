@@ -33,4 +33,4 @@ chrome.identity.launchWebAuthFlow
 
 IDOR·tenant leakage, 만료·잘못된 aud/iss·변조 token 거부, refresh token reuse 시 family 폐기, PKCE code injection·state mismatch·open redirect, magic link 재사용·redirect 조작, 한 client 로그아웃/탈취가 다른 client에 미치는 범위.
 
-> 자체 API rate limiting(로그인·OAuth callback replay 제한 포함)은 [operations/rag-cost-and-rate-limits.md](../operations/rag-cost-and-rate-limits.md) 3절 참고.
+> 자체 API rate limiting(로그인·OAuth callback replay 제한 포함)은 [operations/ai-cost-and-rate-limits.md](../operations/ai-cost-and-rate-limits.md) 3절 참고.

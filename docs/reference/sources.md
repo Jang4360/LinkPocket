@@ -31,7 +31,7 @@
 - Neon connection pooling 공식 문서: https://neon.com/docs/connect/connection-pooling
 - Neon connection·auto-suspend 오류 공식 문서: https://neon.com/docs/connect/connection-errors
 
-## RAG·MCP·운영
+## AI 검색·MCP·운영
 - 토스페이먼츠 MCP 서버 구현기: https://toss.tech/article/tosspayments-mcp
 - 네이버 검색 SRE 사례 Velopers 색인: https://www.velopers.kr/post/899
 - OpenTelemetry Collector 공식 문서: https://opentelemetry.io/docs/collector/

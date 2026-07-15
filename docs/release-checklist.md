@@ -18,14 +18,16 @@
 - [ ] OAuth state/PKCE/redirect 검증, Refresh Token rotation·reuse detection, magic link 1회 사용 테스트가 있다. ([architecture/auth-and-session.md](architecture/auth-and-session.md))
 - [ ] web과 extension session을 분리하고 개별·전체 폐기 경계가 문서화돼 있다.
 - [ ] pipeline에 상태, 멱등 키, 재시도 가능 여부, 오류 이력이 있다. ([architecture/async-pipeline.md](architecture/async-pipeline.md))
-- [ ] 로그인·저장·검색·RAG 자체 API에 user/IP 위험도별 rate limit과 429 계약이 있다. ([operations/rag-cost-and-rate-limits.md](operations/rag-cost-and-rate-limits.md))
-- [ ] RAG golden set과 retrieval/generation 품질 지표가 있다.
-- [ ] retrieval hard gate와 generation nightly 평가를 분리한 CI 정책이 있다. ([operations/observability-slo-kpi.md](operations/observability-slo-kpi.md))
+- [ ] 로그인·저장·검색·요약/임베딩 작업에 user/IP 위험도별 rate limit과 429 계약이 있다. ([operations/ai-cost-and-rate-limits.md](operations/ai-cost-and-rate-limits.md))
+- [ ] 검색 golden set과 요약 품질 지표가 있다.
+- [ ] retrieval hard gate와 요약 nightly 평가를 분리한 CI 정책이 있다. ([operations/observability-slo-kpi.md](operations/observability-slo-kpi.md))
 - [ ] LLM provider별 429·5xx 정책, token/cost ledger, 70/90/100% 예산 동작이 있다.
 - [ ] 저장→색인 전체를 linkId/jobId로 추적할 수 있다.
 - [ ] Micrometer/OTLP→OpenTelemetry Collector→관측 backend 경로와 ADR이 있다.
 - [ ] 제품 KPI의 이벤트·분자·분모·내부 트래픽 제외 기준이 analytics contract에 있다.
 - [ ] k6와 dependency fault 시나리오가 CI 또는 반복 script로 실행된다.
+- [ ] URL·fallback title이 항상 저장되고, 사용자 수정 title/summary가 재처리로 덮어써지지 않는다.
+- [ ] 카테고리 삭제가 Link를 삭제하지 않고 연결만 해제하며, LinkPocket 유도 열람만 `openedAt`으로 기록된다.
 - [ ] 디스콰이엇 출시 48시간·2주·2개월 회고를 남긴다. ([operations/](operations/))
 
 ## 조건이 맞을 때 선택 ([decisions/conditional-tech-adoption.md](decisions/conditional-tech-adoption.md))

@@ -5,8 +5,8 @@
 
 ## 상시 정책 (이미 있음)
 - [data-privacy-and-rights.md](data-privacy-and-rights.md) — 개인정보·이용자 권리·크롤러
-- [observability-slo-kpi.md](observability-slo-kpi.md) — OTel·SLO·제품 KPI·RAG CI
-- [rag-cost-and-rate-limits.md](rag-cost-and-rate-limits.md) — LLM 비용·cache·rate limit
+- [observability-slo-kpi.md](observability-slo-kpi.md) — OTel·SLO·제품 KPI·검색/요약 CI
+- [ai-cost-and-rate-limits.md](ai-cost-and-rate-limits.md) — LLM 비용·cache·rate limit
 - [mistake-ledger.md](mistake-ledger.md) — 반복 실수 누적 → skill/hook 승격 트리거 (하네스 자기개선)
 
 ## 앞으로 쌓는 것

@@ -27,7 +27,7 @@
 - 핵심 ADR 5~7개: modular monolith, 비동기 진화, retrieval, cache, MCP/권한, OpenTelemetry backend
 - OpenAPI와 상태 머신 문서
 - Testcontainers 기반 통합 테스트와 CI
-- k6·RAG eval·AI 한계 실험의 실행 script와 raw result
+- k6·검색/요약 eval·AI 한계 실험의 실행 script와 raw result
 - 운영 dashboard screenshot, runbook, postmortem
 
 ### 대표 블로그 글 후보
@@ -45,7 +45,7 @@
 1. AI 생성 코드를 명세·TDD·CI로 통제한 경험
 2. 외부 URL/AI 의존성의 장애와 보안을 설계한 경험
 3. 비동기 상태 머신과 멱등 재처리를 검증한 경험
-4. RAG 품질을 golden set과 검색 지표로 개선한 경험
+4. 검색·요약 품질을 golden set과 검색 지표로 개선한 경험
 5. 출시 후 지표·장애·피드백을 보고 한 가지 결정을 바꾼 경험
 6. AI가 실제로 만든 결함과 가드레일을 보강해 재발을 막은 경험
 
@@ -54,7 +54,7 @@
 | 지원 방향 | 앞에 둘 LinkPocket 서사 | 보조 증거 |
 |---|---|---|
 | 배달·커머스·핀테크 서비스 | 상태 머신, 멱등 재처리, Outbox 진화, 외부 API 장애 격리 | polling UX, rate limit, OTel 장애 타임라인 |
-| 토스·카카오페이형 AI/생산성 조직 | RAG CI, 비용·rate limit 회계, AI 실패→하네스 개선 | SDD/TDD, MCP 최소 권한, dependency guard |
+| 토스·카카오페이형 AI/생산성 조직 | 검색·요약 CI, 비용·rate limit 회계, AI 실패→하네스 개선 | SDD/TDD, MCP 최소 권한, dependency guard |
 | 검색·콘텐츠·플랫폼 | hybrid retrieval 평가, 책임 있는 crawler, 제품 KPI | headless 도입 판정, tenant filter, 삭제 전파 |
 | SI·대기업 IT 서비스 | Java/Spring, 인증·인가, SQL 실행 계획, transaction·pool, 테스트 자동화 | 관리형 DB 제약, CI/CD, runbook·문서화 |
 | 인프라·플랫폼 성격 | OTLP/Collector, queue lag·capacity, Kafka 전환 신호 | k6, JFR/GC·tcpdump 조건부 진단 |
