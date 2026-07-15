@@ -10,7 +10,27 @@ Spec-Driven Development(SDD): 카카오페이 spec-kit·토스 harness 사례처
 - 사람이 먼저 **계약**(무엇을 만족해야 하는가)과 **대표 실패 조건**을 적고, AI는 그 계약을 채우게 한다.
 - 이 문서가 곧 리뷰·테스트·수용 기준의 기준선이 된다. cs-learning B섹션의 `검증·기록할 증거`(spec↔구현 누락 건수, 수정 turn 수)가 여기서 나온다.
 
-파일명: `NN-기능.md` (예: `01-link-save.md`, `02-semantic-search.md`) — 주차·구현 순서 반영.
+파일명: `NN-기능.md` — 주차·구현 순서 반영.
+
+## 기능 분해 로드맵 (plan 00~09)
+
+**단위:** plan 1개 = Feature 1개 = 독립 머지 가능한 수직 슬라이스(자기 계약 테스트 보유), 안에서 3~8개 task(작은 PR)로 분해. **walking-skeleton 먼저 → 넓힌다.** (근거: [설계확정안](../product/설계확정안.md), [adr-003](../decisions/adr-003-work-decomposition-and-branching.md))
+
+| plan | 무엇 | 의존 | 주차 | task | 위험 로직(인터뷰→ADR) | 상태 |
+|---|---|---|---|---|---|---|
+| [00-walking-skeleton](00-walking-skeleton.md) | Gradle·Spring·Neon·Flyway·`/health` + Testcontainers 통합테스트가 CI green | — | 0 | 2~3 | 없음 | 진행 |
+| 01-auth-google-oauth | 웹/익스텐션 Google OAuth(PKCE)·세션·tenant 경계 | 00 | 1 | 4~6 | ✔ 세션 경계·토큰 회전 | 대기 |
+| 02-link-save-minimal | 익스텐션 저장 → Link 최소 보존 + 상태(persist만) | 01 | 1 | 3~5 | ✔✔ 멱등(user+canonical=1행)·동시 저장 | 대기 |
+| 03-safe-fetch-extract | SSRF-safe fetch + 본문 추출 + 상태전이(AI 없이) | 02 | 2 | 4~6 | ✔ SSRF·timeout·크기 제한 | 대기 |
+| 04-async-ai-pipeline | Job polling·요약·임베딩·pgvector 색인·상태머신·멱등 | 03 | 3 | 6~8 | ✔✔✔ job claim(SKIP LOCKED)·tx 경계·at-least-once | 대기 |
+| 05-categories | 카테고리 CRUD·다중 분류·제목/요약/분류 보정(+재색인) | 02 | 3~4 | 4~6 | ✔ 삭제=연결해제·보정 no-overwrite | 대기 |
+| 06-archive-and-search | 목록·카테고리 탐색·keyset pagination·자연어 시맨틱 검색 | 04,05 | 4 | 5~7 | ✔ tenant filter 서버 강제 | 대기 |
+| 07-related-links | 저장 완료 polling → 연관 추천(≥80%·7일 미열람·최대 3) | 04,06 | 5 | 3~5 | ✔ tenant·임계값 | 대기 |
+| 08-open-events-redirect | redirect + `openedAt`·`openCount`·`source` | 06,07 | 5 | 2~4 | 소 | 대기 |
+| 09-weekly-digest (P1) | scheduler·클러스터·이메일·snooze/영구제외 | 04,08 | 5~6/알파 후 | 6~8 | ✔✔ 스케줄러 중복·발송 멱등·at-least-once | 대기 |
+
+- **조정 여지:** 04가 커지면 `04a-summary`/`04b-embed-index`로 분할, 08은 06에 흡수 가능.
+- **선행 산출물**(설계확정안 §8: ERD·OpenAPI·상태머신)은 [architecture/](../architecture/)에 축적하며 각 plan이 참조한다.
 
 ## 계획 전 필수 — 위험 로직은 사람과 먼저 합의한다
 
