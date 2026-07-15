@@ -21,7 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 계약: plan/00-walking-skeleton.md
  *
  * 이 테스트가 green이 되도록 Codex가 스캐폴딩·구현한다.
- * 계약 테스트(src/test/**/contract/**)는 사람/Claude만 수정한다. (docs/development-loop.md)
+ * 계약 테스트(test 소스의 contract 패키지)는 Codex가 아니라 사람/Claude만 수정한다. (docs/development-loop.md)
  *
  * green으로 만들려면 Codex가 만들어야 하는 것:
  *  - 단일 Gradle 모듈(Kotlin DSL) + Spring Boot 3.4 + Actuator + Flyway
