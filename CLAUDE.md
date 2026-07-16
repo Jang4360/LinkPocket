@@ -16,6 +16,7 @@
 - 위험 로직(동시성·트랜잭션 경계 등)은 임의 결정 금지 → 선택지·견해를 사람에게 먼저 묻고 합의 후 ADR·plan.
 - 인프라(`scripts/verify.sh`·`.github/workflows/**`·`.codex/**`·`.claude/**`)는 **사람 승인 하에만** 변경한다.
 - 반복 실수는 `docs/operations/mistake-ledger.md`에 한 줄 기록(승격 규칙).
+- **PR·커밋 메시지는 한국어로 쓴다.** 표준 헤더(`## What changed` 등)는 영어 유지, 내용만 한국어.
 
 ## Definition of done (구현 task 기준)
 - `./scripts/verify.sh` 통과(green) + Claude 리뷰(불변식) 통과.
