@@ -2,6 +2,7 @@
 
 0주차 산출물(기술스택 문서 5절)이 여기에 들어온다.
 
+- [x] [api-error-contract.md](api-error-contract.md) — 도메인별 비즈니스 에러 코드 + BE-FE 화면 처리 계약 ([ADR-007](../decisions/adr-007-domain-error-code-contract.md))
 - [ ] `openapi.yaml` — 저장·처리 상태·카테고리·검색·연관 추천·열람 redirect·다이제스트 API 초안 (API의 SSOT)
 - [ ] `erd.md` — Link, Category, LinkCategory, Content, Chunk, Job, Digest, OpenEvent
 - [ ] `state-machine.md` — PENDING→FETCHED→CHUNKED→INDEXED, 삭제 파이프라인 DELETE_REQUESTED→…

@@ -17,7 +17,30 @@
 3. **익스텐션 토큰 보관**: `chrome.storage.local`에 refresh token까지 저장 — **단, rotation·reuse detection·짧은 access TTL이 필수 조건.**
 4. **tenant 경계**: 서버가 세션에서 `userId`를 추출해 모든 쿼리에 강제. 클라이언트가 보낸 `userId`류 파라미터는 신뢰하지 않는다.
 
+## 에러 코드 계약 (AUTH 도메인) — 실제 API 구현보다 먼저 확정
+
+스펙: [architecture/api-error-contract.md](../architecture/api-error-contract.md). 이 plan에서 공통 `ErrorCode` 인터페이스·envelope·전역 예외 핸들러를 처음 만들고(task-01a-2), `AuthErrorCode`가 첫 도메인 enum이 된다.
+
+| 코드 | HTTP status | 화면 처리 | 사용자 문구 owner |
+|---|---|---|---|
+| `AUTH_SESSION_EXPIRED` | 401 | 전체 화면 리다이렉트(로그인 페이지) | BE 기본값 |
+| `AUTH_SESSION_INVALID` | 401 | 전체 화면 리다이렉트(로그인 페이지) | BE 기본값 |
+| `AUTH_OAUTH_STATE_MISMATCH` | 400 | 토스트("로그인 세션이 유효하지 않습니다. 다시 시도해주세요.") + 로그인 재시작 | BE 기본값 |
+| `AUTH_OAUTH_CODE_EXCHANGE_FAILED` | 502 | 토스트("Google 로그인에 실패했습니다. 잠시 후 다시 시도해주세요.") | BE 기본값 |
+| `AUTH_REFRESH_TOKEN_INVALID` | 401 | 전체 화면 리다이렉트(익스텐션 재로그인) | BE 기본값 |
+| `AUTH_REFRESH_TOKEN_REUSED` | 401 | **전체 화면 리다이렉트 + 보안 경고 토스트**("비정상적인 로그인 시도가 감지되어 모든 세션이 종료되었습니다.") — family 전체 폐기됐음을 사용자에게 알림 | FE 재정의(보안 경고 문구는 FE가 강조 스타일로 표시) |
+| `AUTH_FORBIDDEN_RESOURCE` | 403 | 토스트("접근 권한이 없습니다.") — IDOR 방어 발동 시. 리소스 존재 자체를 숨겨야 하는 곳은 `AUTH_RESOURCE_NOT_FOUND`(404)로 대체 | BE 기본값 |
+| `AUTH_RESOURCE_NOT_FOUND` | 404 | 인라인("찾을 수 없습니다") 또는 목록에서 조용히 제외 | FE 재정의 |
+| `AUTH_PKCE_VERIFICATION_FAILED` | 400 | 토스트 + 로그인 재시작 | BE 기본값 |
+
+이 표는 위 "실패 조건" 절의 각 케이스에 대응한다. **구현 중 실패 조건이 추가되면 이 표도 함께 갱신한다** — 표와 enum 상수가 항상 1:1이어야 한다(architecture/api-error-contract.md 4절 검증 원칙).
+
 ## Acceptance Criteria (수용 기준)
+
+**에러 계약**
+- [ ] 모든 인증 실패 응답은 [api-error-contract.md](../architecture/api-error-contract.md) envelope(`code`,`domain`,`message`,`traceId`,`details`)을 따른다.
+- [ ] `AuthErrorCode`의 모든 상수가 `AUTH_` 접두사로 시작한다(단위 테스트로 강제).
+- [ ] 전역 예외 핸들러가 처리하지 못한 예외(500)도 envelope 형태로 나가고 stack trace가 응답 본문에 노출되지 않는다.
 
 **웹 로그인**
 - [ ] `GET /oauth2/authorization/google` → Google 동의 화면으로 리다이렉트.
@@ -64,11 +87,12 @@
 | `POST /api/extension/logout` | 익스텐션 device session 폐기 | 204 |
 
 ## 구현 계획 (task = 작은 PR)
-1. **task-01a — User 엔티티 + Flyway V2**: `User(id, googleSub, email, name, createdAt)`, unique constraint on `googleSub`.
-2. **task-01b — 웹 OAuth + 세션 스토어**: Spring Security OAuth2 Client(Google), 세션 저장소(JDBC 세션 또는 자체 `Session` 테이블), `GET /api/me`, `POST /api/logout`.
-3. **task-01c — 익스텐션 PKCE 교환 + device session**: `DeviceSession(id, userId, refreshTokenHash, family, createdAt, revokedAt)`, `/api/extension/oauth/callback`.
-4. **task-01d — refresh rotation + reuse detection**: `/api/extension/token/refresh`, family 폐기 로직.
-5. **task-01e — tenant 경계 강제 + IDOR 테스트 보강**: 공통 인증 컨텍스트(`@AuthenticationPrincipal` 등)로 `userId` 추출을 표준화, 모든 리포지토리 접근 지점 점검.
+1. **task-01a-1 — 공통 에러 프레임워크**: `ErrorCode` 인터페이스, 공통 envelope DTO, `DomainException`, 전역 `@RestControllerAdvice` 예외 핸들러. (이후 모든 도메인이 재사용 — plan-01에서 1회만 구축)
+2. **task-01a-2 — User 엔티티 + Flyway V2**: `User(id, googleSub, email, name, createdAt)`, unique constraint on `googleSub`.
+3. **task-01b — 웹 OAuth + 세션 스토어**: Spring Security OAuth2 Client(Google), 세션 저장소(JDBC 세션 또는 자체 `Session` 테이블), `GET /api/me`, `POST /api/logout`, `AuthErrorCode` 적용.
+4. **task-01c — 익스텐션 PKCE 교환 + device session**: `DeviceSession(id, userId, refreshTokenHash, family, createdAt, revokedAt)`, `/api/extension/oauth/callback`.
+5. **task-01d — refresh rotation + reuse detection**: `/api/extension/token/refresh`, family 폐기 로직, `AUTH_REFRESH_TOKEN_REUSED` 응답.
+6. **task-01e — tenant 경계 강제 + IDOR 테스트 보강**: 공통 인증 컨텍스트(`@AuthenticationPrincipal` 등)로 `userId` 추출을 표준화, 모든 리포지토리 접근 지점 점검.
 
 ## 위험 로직 결정 (합의 완료 — [ADR-006](../decisions/adr-006-auth-session-architecture.md))
 - 웹 세션 저장: HttpOnly 쿠키 + 서버 세션 스토어 → ADR-006 결정 1
