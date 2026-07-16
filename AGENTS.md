@@ -20,6 +20,7 @@
 
 ## 통합
 - 작은 단위(task)로 커밋/PR. Trunk(main)에 자주, 미완성은 feature flag OFF. (근거: `docs/decisions/adr-003-work-decomposition-and-branching.md`)
+- **PR·커밋 메시지는 한국어로 쓴다.** 표준 헤더(`## What changed` 등)는 영어 유지, 내용만 한국어. (`docs/development-loop.md` PR·커밋 언어 규칙)
 
 ## 스택
 - Java 21 + Spring Boot + JPA/QueryDSL, Gradle Kotlin DSL.
