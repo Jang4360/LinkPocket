@@ -15,6 +15,7 @@
 - `adr-004-ai-context-files.md` — CLAUDE.md/AGENTS.md를 ≤60줄 "라우터"로.
 - `adr-005-mistake-promotion.md` — 반복 실수를 skill/hook으로 승격하는 하네스 자기개선 규칙.
 - `adr-006-auth-session-architecture.md` — 웹 세션(HttpOnly 쿠키)·익스텐션 PKCE·토큰 보관·tenant 경계 강제 (plan-01 근거).
+- `adr-007-domain-error-code-contract.md` — 도메인별 비즈니스 에러 코드 enum + 공통 envelope + BE-FE 화면 처리 계약. 모든 plan이 따르는 횡단 규칙.
 
 > 개발 루프 전체(계약 우선·2에이전트·사람 게이트)는 [development-loop.md](../development-loop.md)에, 그 근거 결정들은 위 3번 범주 ADR에 있다.
 
