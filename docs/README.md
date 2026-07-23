@@ -16,10 +16,11 @@
 
 ## 처음 읽는 순서
 
+0. [product/invariants.md](product/invariants.md) — **핵심 불변조건 1페이지** (가장 먼저, 나머지는 이 위에서 상세화)
 1. [product/설계확정안.md](product/설계확정안.md) — **무엇을** 만드는가
 2. [decisions/기술스택.md](decisions/기술스택.md) — **무엇으로·왜**
 3. [learning/cs-learning.md](learning/cs-learning.md) — **어떻게 학습하며** 만드는가
-4. [development-loop.md](development-loop.md) — **어떻게 개발하는가** (사람·Claude·Codex 공유 개발 루프 + AI가 지킬 규칙)
+4. [development-loop.md](development-loop.md) — **어떻게 개발하는가** (사람·Claude·Codex 공유 개발 루프 + AI가 지킬 규칙 + 정지 조건)
 
 제품 범위는 [설계확정안](product/설계확정안.md)이 단일 기준이다. 기술 선택과 런타임 설계가 충돌하면 `decisions/`·`architecture/`의 최신 결정을 우선한다.
 

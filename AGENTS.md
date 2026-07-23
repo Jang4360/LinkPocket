@@ -9,10 +9,12 @@
 - 내부 단위 테스트는 추가해도 된다(계약을 강화만). red-green-refactor로.
 - 변경 전·후 반드시 `./scripts/verify.sh`를 실행해 green을 확인한다. (Codex는 명령을 자동 실행하지 않으니 **명시적으로 돌려라**.)
 
-## 하면 안 되는 것 (보호 경로 — 사람만)
-- `src/test/**/contract/**`, `scripts/verify.sh`, `scripts/check-protected.sh`, `.claude/**`, `.codex/**`, `.github/workflows/**`
+## 하면 안 되는 것 (보호 경로 — CODEOWNERS로 강제됨)
+- `src/test/**/contract/**`, `scripts/verify.sh`, `scripts/check-protected.sh`, `scripts/check-secrets.sh`, `.claude/**`, `.codex/**`, `.github/workflows/**`, `.github/CODEOWNERS`
 - 게이트가 막히면 **우회 경로를 찾지 말고** 멈춰서 사람에게 보고한다. 테스트를 무르게 고쳐 통과시키지 않는다.
 - 계획(plan) 밖 파일을 건드리지 않는다. diff는 해당 task 범위 안에 둔다.
+- 비밀값(API 키·자격증명 등)을 코드에 하드코딩하지 않는다. `check-secrets.sh`가 push/CI에서 검사한다.
+- `docs/development-loop.md`의 "정지 조건(STOP CONDITIONS)"에 해당하면 진행하지 말고 멈춘다.
 
 ## 강제 (네게 걸린 훅)
 - `.codex/hooks.json`이 위 보호 경로 편집을 차단(PreToolUse)하고, 턴 종료 시 `verify.sh`를 강제(Stop)한다.

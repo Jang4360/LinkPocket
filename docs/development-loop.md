@@ -57,17 +57,19 @@
 
 ### 보호 경로 (구현자·자동화가 수정하면 안 되는 것)
 - 계약 테스트 (`src/test/**/contract/**`) — **Claude가 작성**하고 **Codex는 건드리지 못한다.** "사람만"이 아니라 "구현자(Codex)로부터 보호"가 정확한 표현.
-- `scripts/verify.sh`, `scripts/check-protected.sh` (게이트)
+- `scripts/verify.sh`, `scripts/check-protected.sh`, `scripts/check-secrets.sh` (게이트)
 - `.claude/**`, `.codex/hooks/**` (hook 설정)
-- `.github/workflows/**` (CI)
+- `.github/workflows/**`, `.github/CODEOWNERS` (CI·리뷰 강제)
+
+이 경로들은 `.github/CODEOWNERS`에 등록돼 있어, PR이 이 경로를 건드리면 **GitHub이 네이티브로 코드 오너 리뷰를 요구**한다(ruleset의 `require_code_owner_review`). 별도 스크립트 없이 GitHub 자체 기능으로 강제된다. ([ADR-008](decisions/adr-008-harness-hardening.md))
 
 ### 4겹 강제 — 훅은 에이전트별, 진짜 teeth는 agent-agnostic
 훅은 **에이전트마다 따로** 걸린다(Claude 훅은 Codex를 못 막고 그 반대도 마찬가지). 그래서 훅은 1겹일 뿐이고, 실제 방어는 git·CI·브랜치 보호처럼 **누가 변경했든 상관없는(agent-agnostic)** 층이다.
 
 1. **에이전트 훅 (per-agent, 즉시 차단)** — 구현자 **Codex**의 `.codex/` 훅이 보호 경로 편집을 `apply_patch` 단계에서 차단(PreToolUse)하고 Stop에서 `verify.sh`를 강제한다. *Claude는 계약 테스트의 작성자·리뷰어라 protect/gate 훅을 두지 않는다* (아래 주의).
-2. **git pre-push (agent-agnostic)** — `.githooks/pre-push`가 누가 push하든 `check-protected.sh`로 계약 테스트 삭제를 막는다. (`core.hooksPath=.githooks`)
-3. **CI 독립 재검증 (agent-agnostic, 진짜 게이트)** — AI가 통제 못 하는 CI(`.github/workflows/verify.yml`)가 `verify.sh` + `check-protected.sh`를 다시 돌린다. 로컬 훅·pre-push를 우회(`--no-verify`)해도 여기서 걸린다.
-4. **브랜치 보호 + 최소 권한** — `main` 머지는 사람 PR 승인 필수. AI에게 CI 설정 변경·`main` 직접 push 자격을 주지 않는다.
+2. **git pre-push (agent-agnostic)** — `.githooks/pre-push`가 누가 push하든 `check-protected.sh`(계약 테스트 삭제 차단) + `check-secrets.sh`(비밀값 유입 차단)를 돌린다. (`core.hooksPath=.githooks`)
+3. **CI 독립 재검증 (agent-agnostic, 진짜 게이트)** — AI가 통제 못 하는 CI(`.github/workflows/verify.yml`)가 `verify.sh` + `check-protected.sh` + `check-secrets.sh`를 다시 돌린다. 로컬 훅·pre-push를 우회(`--no-verify`)해도 여기서 걸린다.
+4. **브랜치 보호 + CODEOWNERS + 최소 권한** — `main` 머지는 사람 PR 승인 필수. 보호 경로 변경은 CODEOWNERS로 오너 리뷰가 추가 강제된다. AI에게 CI 설정 변경·`main` 직접 push 자격을 주지 않는다.
 
 > 핵심: 훅 하나는 뚫릴 수 있고 한 에이전트에만 걸린다. **뚫려도 CI·브랜치 보호가 독립적으로 다시 막는 것**이 설계다. "AI가 hook을 풀지 않겠지?"의 답은 *신뢰가 아니라 agent-agnostic한 CI·브랜치 보호*다.
 
@@ -84,6 +86,17 @@
 4. **계약(불변식)이 잘못됐다고 생각되면** 구현을 비틀지 말고 plan 수정을 Claude·사람에게 제안하라.
 5. **계획 밖 파일을 건드리지 마라.** diff는 해당 plan 범위 안에 둔다.
 6. **PR·커밋 메시지는 한국어로 쓴다.** 아래 "PR·커밋 언어 규칙" 참고.
+
+## 정지 조건 (STOP CONDITIONS)
+
+아래 중 하나라도 해당하면 **AI는 계속 진행하지 말고 멈춰서 사람에게 보고한다.** (역할 분리와 별개로, 실행 자체가 위험한 상황을 판단하는 기준 — [ADR-008](decisions/adr-008-harness-hardening.md))
+
+- **정책·ADR·plan 충돌**: 지금 하려는 일이 이미 확정된 문서와 어긋난다.
+- **허용 범위 밖 수정이 필요**: plan이 정한 범위 밖 파일/경로를 건드려야 목표를 달성할 수 있다.
+- **스키마·권한·외부 전송 변경이 필요**: DB 스키마, 인증·권한 로직, 외부로 데이터를 보내는 코드를 계획에 없이 바꿔야 한다.
+- **테스트 실패가 계약 자체의 문제로 보임**: 구현을 아무리 고쳐도 계약 테스트가 의도와 안 맞아 보인다(walking-skeleton 때처럼 계약 쪽 버그일 수 있다).
+- **재시도·시간·비용 한도 초과**: 같은 실패를 반복하거나(루프 발산), 정해둔 turn/시간 예산을 넘었다.
+- **비밀값·개인정보 노출 의심**: `check-secrets.sh`가 잡지 못한 패턴이라도, 자격증명·PII로 보이는 값을 다루게 됐다.
 
 ## PR·커밋 언어 규칙
 

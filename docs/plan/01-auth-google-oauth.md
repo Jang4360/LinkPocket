@@ -11,6 +11,12 @@
 - **포함:** Google OAuth Authorization Code + PKCE, 웹 세션(HttpOnly 쿠키 + 서버 세션 스토어), 익스텐션 device session(`chrome.storage.local`, refresh rotation), `userId` 기반 tenant 강제, 로그인/로그아웃/세션 조회 API.
 - **제외:** GitHub 등 추가 OAuth provider, magic link(다이제스트용 — plan-09에서), 관리자 세션 감사 UI, 다중 기기 관리 화면(P1 후보).
 
+## 허용 쓰기 경로 (소급 반영 — [ADR-008](../decisions/adr-008-harness-hardening.md))
+- `src/main/java/com/linkpocket/auth/**`, `src/main/java/com/linkpocket/common/**`(공통 에러 프레임워크)
+- `src/main/resources/db/migration/V2__*.sql`
+- `build.gradle.kts` (신규 의존성 추가만)
+- `src/test/java/com/linkpocket/contract/auth/**`는 Claude 소유(Codex 쓰기 금지, 이미 명시됨)
+
 ## 승인된 설계 결정 (게이트 ① — [ADR-006](../decisions/adr-006-auth-session-architecture.md))
 1. **웹 세션**: HttpOnly+Secure+SameSite 쿠키(세션ID만) + 서버 세션 스토어(DB).
 2. **익스텐션 인증**: `chrome.identity.launchWebAuthFlow` + Authorization Code + PKCE.

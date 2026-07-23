@@ -70,6 +70,10 @@ Spec-Driven Development(SDD): 카카오페이 spec-kit·토스 harness 사례처
 - 포함: <이번에 만드는 것>
 - 제외: <이번엔 안 하는 것 — 스코프 방어>
 
+## 허용 쓰기 경로 (task 범위 강제용)
+- <예: src/main/java/com/linkpocket/auth/**, src/main/resources/db/migration/V2__*.sql>
+- 이 경로 밖을 건드려야 한다면 계획 부족이므로 멈추고 plan을 먼저 갱신한다([development-loop.md 정지 조건](../development-loop.md)).
+
 ## Acceptance Criteria (수용 기준)
 - [ ] <관찰 가능한 행동으로. 예: 저장 성공 시 status=PROCESSING과 linkId를 반환한다.>
 
