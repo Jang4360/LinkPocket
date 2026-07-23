@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # agent-agnostic pre-push — 누가 push하든(사람·Claude·Codex) 실행된다.
-# 계약 테스트 삭제(약화)를 push 단계에서 차단한다. (전체 게이트는 CI가 담당)
+# 계약 테스트 삭제(약화)와 비밀값 유입을 push 단계에서 차단한다. (전체 게이트는 CI가 담당)
 # 활성화: git config core.hooksPath .githooks
 root="$(git rev-parse --show-toplevel)"
 bash "$root/scripts/check-protected.sh" "origin/main...HEAD"
+bash "$root/scripts/check-secrets.sh" "origin/main...HEAD"
