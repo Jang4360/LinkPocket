@@ -27,7 +27,6 @@ import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
-import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -112,19 +111,19 @@ abstract class AbstractAuthContractTest {
     }
 
     protected void stubGoogleTokenExchangeSuccess(String accessTokenValue) {
-        stubFor(com.github.tomakehurst.wiremock.client.WireMock.post(urlEqualTo("/token"))
+        GOOGLE.stubFor(com.github.tomakehurst.wiremock.client.WireMock.post(urlEqualTo("/token"))
                 .willReturn(okJson("{\"access_token\":\"" + accessTokenValue
                         + "\",\"token_type\":\"Bearer\",\"expires_in\":3599}")));
     }
 
     protected void stubGoogleUserInfo(String sub, String email, String name) {
-        stubFor(com.github.tomakehurst.wiremock.client.WireMock.get(urlEqualTo("/userinfo"))
+        GOOGLE.stubFor(com.github.tomakehurst.wiremock.client.WireMock.get(urlEqualTo("/userinfo"))
                 .willReturn(okJson("{\"sub\":\"" + sub + "\",\"email\":\"" + email + "\",\"name\":\"" + name + "\"}")));
     }
 
     /** Google이 code/verifier 불일치로 거절하는 상황(invalid_grant, 4xx) — PKCE 검증 실패로 매핑돼야 한다. */
     protected void stubGoogleTokenExchangeInvalidGrant() {
-        stubFor(com.github.tomakehurst.wiremock.client.WireMock.post(urlEqualTo("/token"))
+        GOOGLE.stubFor(com.github.tomakehurst.wiremock.client.WireMock.post(urlEqualTo("/token"))
                 .willReturn(aResponse().withStatus(400)
                         .withHeader("Content-Type", "application/json")
                         .withBody("{\"error\":\"invalid_grant\"}")));
@@ -132,7 +131,7 @@ abstract class AbstractAuthContractTest {
 
     /** Google 쪽 일시 장애(5xx) — provider 장애로 매핑돼야 한다(PKCE 문제와 구분). */
     protected void stubGoogleTokenExchangeServerError() {
-        stubFor(com.github.tomakehurst.wiremock.client.WireMock.post(urlEqualTo("/token"))
+        GOOGLE.stubFor(com.github.tomakehurst.wiremock.client.WireMock.post(urlEqualTo("/token"))
                 .willReturn(aResponse().withStatus(500)));
     }
 
