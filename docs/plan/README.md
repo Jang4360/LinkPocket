@@ -19,8 +19,8 @@ Spec-Driven Development(SDD): 카카오페이 spec-kit·토스 harness 사례처
 | plan | 무엇 | 의존 | 주차 | task | 위험 로직(인터뷰→ADR) | 상태 |
 |---|---|---|---|---|---|---|
 | [00-walking-skeleton](00-walking-skeleton.md) | Gradle·Spring·Neon·Flyway·`/health` + Testcontainers 통합테스트가 CI green | — | 0 | 2~3 | 없음 | 진행 |
-| [01-auth-google-oauth](01-auth-google-oauth.md) | 웹/익스텐션 Google OAuth(PKCE)·세션·tenant 경계 + 공통 에러 프레임워크(1회 구축) | 00 | 1 | 6 | ✔ 세션 경계·토큰 회전([ADR-006](../decisions/adr-006-auth-session-architecture.md)) · 에러 계약([ADR-007](../decisions/adr-007-domain-error-code-contract.md)) | 승인 대기 |
-| 02-link-save-minimal | 익스텐션 저장 → Link 최소 보존 + 상태(persist만) | 01 | 1 | 3~5 | ✔✔ 멱등(user+canonical=1행)·동시 저장 | 대기 |
+| [01-auth-google-oauth](01-auth-google-oauth.md) | 웹/익스텐션 Google OAuth(PKCE)·세션·tenant 경계 + 공통 에러 프레임워크(1회 구축) | 00 | 1 | 6 | ✔ 세션 경계·토큰 회전([ADR-006](../decisions/adr-006-auth-session-architecture.md)) · 에러 계약([ADR-007](../decisions/adr-007-domain-error-code-contract.md)) | 완료 |
+| [02-link-save-minimal](02-link-save-minimal.md) | 익스텐션 저장 → Link 최소 보존 + 상태(persist만) | 01 | 1 | 3~5 | ✔✔ 멱등(user+canonical=1행)·동시 저장([ADR-010](../decisions/adr-010-link-idempotent-save.md)) | 승인 대기 |
 | 03-safe-fetch-extract | SSRF-safe fetch + 본문 추출 + 상태전이(AI 없이) | 02 | 2 | 4~6 | ✔ SSRF·timeout·크기 제한 | 대기 |
 | 04-async-ai-pipeline | Job polling·요약·임베딩·pgvector 색인·상태머신·멱등 | 03 | 3 | 6~8 | ✔✔✔ job claim(SKIP LOCKED)·tx 경계·at-least-once | 대기 |
 | 05-categories | 카테고리 CRUD·다중 분류·제목/요약/분류 보정(+재색인) | 02 | 3~4 | 4~6 | ✔ 삭제=연결해제·보정 no-overwrite | 대기 |
