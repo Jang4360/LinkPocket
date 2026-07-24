@@ -4,7 +4,8 @@
 작업 시작 전 개발 규칙 전체를 먼저 읽어라(라우터 — 인라인 안 함): `docs/development-loop.md`
 
 ## 작업 전 무엇을 읽나 (라우터)
-- 핵심 불변조건(1페이지) → `docs/product/invariants.md`  ← 가장 먼저
+- 이전 세션이 뭘 했고 다음에 뭘 할지 → `docs/operations/session-state.md`  ← 가장 먼저
+- 핵심 불변조건(1페이지) → `docs/product/invariants.md`  ← 그다음
 - 개발 루프·AI 규칙 → `docs/development-loop.md`  ← 그다음
 - 무엇을/왜 → `docs/product/` · `docs/decisions/`
 - 기능 구현 전(계약) → `docs/plan/NN-기능.md` (템플릿: `docs/plan/README.md`)
