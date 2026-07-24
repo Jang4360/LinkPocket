@@ -17,6 +17,7 @@
 - `adr-006-auth-session-architecture.md` — 웹 세션(HttpOnly 쿠키)·익스텐션 PKCE·토큰 보관·tenant 경계 강제 (plan-01 근거).
 - `adr-007-domain-error-code-contract.md` — 도메인별 비즈니스 에러 코드 enum + 공통 envelope + BE-FE 화면 처리 계약. 모든 plan이 따르는 횡단 규칙.
 - `adr-008-harness-hardening.md` — 외부 하네스 개선 제안 검토 결과: invariants.md·STOP CONDITIONS·check-secrets.sh·CODEOWNERS 채택, R0~R4/verify 분리/deploy.yml 보류.
+- `adr-009-ai-harness-architecture.md` — **하네스 전체 구조·철학 종합.** 개별 ADR(001~008)을 하나의 그림(4층: 컨텍스트→루프→4겹강제→자기개선)으로 잇는 문서. 큰 그림이 궁금하면 여기부터.
 
 > 개발 루프 전체(계약 우선·2에이전트·사람 게이트)는 [development-loop.md](../development-loop.md)에, 그 근거 결정들은 위 3번 범주 ADR에 있다.
 
