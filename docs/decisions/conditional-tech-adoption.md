@@ -48,6 +48,10 @@
 | JVM/DB warm-up | 배포 직후와 Neon suspend 후 지연을 분리 측정해 JVM class loading/JIT가 SLO 위반 원인으로 확인 | startup probe, lazy path 제거, DB reconnect·query 개선 | 인위적 warm-up 미도입 |
 | tcpdump | app log/metric에서 timeout과 reset·retransmission을 구분 불가 | structured error, HTTP client metric, Toxiproxy | LAB만 수행하거나 생략 |
 | SSE/Netty | 사용자가 진행 상태를 실시간으로 봐야 하고 polling 비용·지연이 문제 | polling, 짧은 long-poll | 미도입 |
+| R0~R4 전체 실행 위험 등급 체계 | staging/production 환경이 실제로 생겨 R2·R3 대상이 존재할 때 | 지금은 [development-loop.md](../development-loop.md) STOP CONDITIONS로 충분 | 등급 체계 미도입, STOP CONDITIONS만 유지 |
+| `verify.sh` `--fast`/`--full` 분리 + pre-commit | 계약 테스트 스위트가 커져 pre-push/CI 지연이 실제 마찰이 됨(체감 대기시간 측정) | 지금은 단일 `verify.sh` + pre-push만 | 단일 verify.sh 유지 |
+| `deploy.yml`(배포 파이프라인) | staging URL·immutable artifact·rollback 대상·production 승인자가 확정됨 | [release-checklist.md](../release-checklist.md)를 운영 기준으로 유지 | deploy.yml 미도입 |
+| `check-scope.sh`(task 허용 경로 자동 검사) | plan의 "허용 쓰기 경로"가 여러 plan에서 반복 활용되고 수동 리뷰 부담이 실측됨 | plan 문서의 허용 쓰기 경로를 리뷰 시 수동 대조 | 미도입 |
 
 Playwright를 도입할 경우 RSS·CPU·페이지 처리시간을 현재 배포 환경에서 직접 측정한다. 고정된 "브라우저 1개당 메모리" 수치를 전제하지 않으며, 신뢰할 수 없는 JavaScript 실행은 main application과 분리된 sandbox worker, URL 재검증, resource/domain/시간/크기 제한 아래에서만 허용한다.
 

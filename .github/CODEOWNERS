@@ -1,0 +1,11 @@
+# 보호 인프라 — 반드시 코드 오너 리뷰를 거친다.
+# ruleset의 "require_code_owner_review"가 이 파일 기준으로 강제된다.
+# (docs/decisions/adr-008-harness-hardening.md 참고)
+
+/scripts/verify.sh            @Jang4360
+/scripts/check-protected.sh   @Jang4360
+/scripts/check-secrets.sh     @Jang4360
+/.github/workflows/           @Jang4360
+/.codex/                      @Jang4360
+/.githooks/                   @Jang4360
+/src/test/**/contract/        @Jang4360
