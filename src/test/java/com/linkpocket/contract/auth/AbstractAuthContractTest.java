@@ -15,8 +15,6 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -42,15 +40,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-@Testcontainers
 abstract class AbstractAuthContractTest {
 
-    @Container
+    /**
+     * Singleton 컨테이너 패턴(의도적으로 @Container/@Testcontainers를 쓰지 않음) — 이 필드는
+     * 추상 클래스에 선언돼 여러 서브클래스(WebSessionContractTest 등)가 상속해 공유한다.
+     * @Container로 관리하면 JUnit5가 "먼저 끝나는 서브클래스"의 afterAll에서 컨테이너를 정지시켜,
+     * 전체 스위트 실행 시 이후 서브클래스가 이미 죽은 컨테이너에 연결을 시도해
+     * CannotGetJdbcConnectionException이 난다(개별 클래스 단독 실행 땐 재현 안 됨).
+     * GOOGLE과 동일하게 static 블록에서 1회 시작하고, 정지는 Ryuk(컨테이너 종료 시 자동 정리)에 맡긴다.
+     */
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
 
     protected static final WireMockServer GOOGLE = new WireMockServer(WireMockConfiguration.options().dynamicPort());
 
     static {
+        POSTGRES.start();
         GOOGLE.start();
     }
 
