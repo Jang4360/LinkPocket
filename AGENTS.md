@@ -1,7 +1,7 @@
 # AGENTS.md — Codex 컨텍스트
 
 너는 이 프로젝트에서 **구현**을 맡는다. 계획·계약 테스트·리뷰는 Claude와 사람이 한다.
-먼저 읽어라: `docs/development-loop.md`(개발 규칙), 그리고 지금 구현할 `docs/plan/NN-기능.md`(계약).
+먼저 읽어라: `docs/operations/session-state.md`(이전 세션 상태) → `docs/development-loop.md`(개발 규칙) → 지금 구현할 `docs/plan/NN-기능.md`(계약).
 
 ## 작업 방식 (working agreement)
 - `docs/plan/NN`의 acceptance criteria·불변식·실패 조건을 **계약**으로 삼아 구현한다.
