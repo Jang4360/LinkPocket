@@ -15,6 +15,7 @@
 |---|---|---|---|---|
 | (예) 2026-07-20 | tx-boundary | 외부 HTTP 호출이 트랜잭션 안에 들어감 | Claude 리뷰 | – |
 | 2026-07-16 | contract-test-authoring | 계약 테스트 Javadoc의 `**/contract/**`가 `*/`로 주석을 조기 종료 → 컴파일 오류 | Codex 게이트(우회 없이 에스컬레이션) → Claude 교정 | – (1회, 교정만) |
+| 2026-07-16 | contract-test-authoring | WireMock 정적 `stubFor(...)`가 기본 포트(8080)로 등록돼 동적 포트 서버(GOOGLE)와 불일치 → 404 | Codex 게이트(우회 없이 에스컬레이션) → Claude 교정(`GOOGLE.stubFor`로 변경) | **승격 후보(2회째)** — development-loop 참고, 사람 승인 대기 |
 
 ## 카테고리 예시 (필요하면 자라남)
 
