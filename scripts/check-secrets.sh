@@ -21,7 +21,7 @@ patterns=(
   '-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----'
   'AKIA[0-9A-Z]{16}'
   'GOCSPX-[A-Za-z0-9_-]{20,}'
-  '(api[_-]?key|secret|password|token)[[:space:]]*[:=][[:space:]]*[A-Za-z0-9+/_=-]{16,}'
+  '(^|[^A-Za-z0-9])(api[_-]?key|secret|password|token)[[:space:]]*[:=][[:space:]]*[A-Za-z0-9+/_=-]{16,}'
 )
 
 hit=0
