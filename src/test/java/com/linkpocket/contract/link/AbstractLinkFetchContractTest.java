@@ -27,8 +27,10 @@ import java.util.UUID;
  * 주입한다 — loopback 전체(127.0.0.0/8)를 허용하는 게 아니라 딱 WireMock 하나만이다.
  *
  * green으로 만들려면 Codex가 지원해야 하는 것:
- *  - `linkpocket.fetch.ssrf.allowed-test-hosts` 프로퍼티(콤마 구분 host 목록, 예: "127.0.0.1")를
- *    읽어 SSRF 검증에서 "정확히 이 host 문자열"만 예외로 허용한다. 이 프로퍼티가 없으면(운영)
+ *  - `linkpocket.fetch.ssrf.allowed-test-hosts` 프로퍼티(콤마 구분 host 목록 — 이 클래스는
+ *    `ORIGIN.baseUrl()`의 실제 host를 그대로 흘려보낸다, WireMock 버전에 따라 "localhost"일
+ *    수도 "127.0.0.1"일 수도 있어 하드코딩하지 않는다)를 읽어 SSRF 검증에서 "정확히 이
+ *    host 문자열"만 예외로 허용한다. 이 프로퍼티가 없으면(운영)
  *    아무 예외도 없다 — application.yml에 이 키를 두지 않는다.
  *  - 이 예외는 loopback 전체를 허용하는 게 아니므로, `127.0.0.2`(같은 loopback 대역의 다른
  *    주소)나 `169.254.169.254`(메타데이터) 등은 이 설정과 무관하게 여전히 차단돼야 한다
@@ -51,7 +53,11 @@ abstract class AbstractLinkFetchContractTest {
         registry.add("spring.datasource.username", POSTGRES::getUsername);
         registry.add("spring.datasource.password", POSTGRES::getPassword);
         // WireMock의 정확한 host만 SSRF 예외 목록에 넣는다 — loopback 전체를 여는 게 아니다.
-        registry.add("linkpocket.fetch.ssrf.allowed-test-hosts", () -> "127.0.0.1");
+        // ORIGIN.baseUrl()이 실제로 만드는 host(버전에 따라 "localhost"일 수도, "127.0.0.1"일 수도
+        // 있다)를 그 자리에서 그대로 파싱해 쓴다 — 하드코딩한 문자열이 실제 host와 어긋나는
+        // 사고를 원천 차단한다(리터럴을 추측해 적어뒀다가 어긋난 적이 있었다).
+        registry.add("linkpocket.fetch.ssrf.allowed-test-hosts",
+                () -> java.net.URI.create(ORIGIN.baseUrl()).getHost());
         // timeout 계약 테스트가 실제로 몇 초씩 기다리지 않도록 예산을 작게 오버라이드한다.
         // 운영 기본값(3000/5000/15000ms, ADR-011)과 같은 키를 그대로 쓰되 값만 다르게 둔다.
         registry.add("linkpocket.fetch.timeout.connect-ms", () -> "300");
