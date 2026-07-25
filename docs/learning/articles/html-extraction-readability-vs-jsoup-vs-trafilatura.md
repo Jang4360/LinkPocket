@@ -2,7 +2,7 @@
 주제: HTML 본문 추출 라이브러리 — readability4j vs jsoup 직접 파싱 vs Trafilatura
 관련 plan: [plan/03-safe-fetch-extract.md](../../plan/03-safe-fetch-extract.md)
 cs-learning 축: D. 외부 URL 수집: 네트워크·보안 / 본문 추출
-작성일: 2026-07-24 / 상태: 초안
+작성일: 2026-07-24 / 상태: ADR 반영 완료([ADR-011](../../decisions/adr-011-safe-fetch-ssrf-timeout-retry.md))
 ---
 
 fetch는 성공했다. SSRF 방어도 통과했다(Apache HttpClient5는 이미 확정된 선택 — [기술스택.md](../../decisions/기술스택.md) 2-5절). 그런데 저장된 링크의 "본문"을 열어 보면 네비게이션 메뉴, 쿠키 배너, "구독하기" 문구로 가득하다 — 이건 fetch 실패가 아니라 **추출 실패**다. `기술스택.md`도 이 항목만은 "아직 논의 필요"로 명시적으로 남겨 뒀다(4절: readability4j vs jsoup 직접 파싱 vs Trafilatura).
@@ -45,4 +45,4 @@ readability4j로 시작하는 걸 추천한다. 별도 프로세스 없이 JVM �
 **"추출 정확도"와 "런타임 단순성"은 동시에 최대화할 수 없다** — Trafilatura가 정확도는 높지만 이종 런타임 비용을 치른다.
 
 - 사람과 논의해 정할 것: 추출 실패율 허용 기준(몇 %부터 문제로 볼지), readability4j 실측 실패율이 얼마 이상이면 Trafilatura를 재고할지의 임계값.
-- 최종 결정: (ADR 작성 후 여기 링크)
+- 최종 결정: readability4j 채택 → [ADR-011](../../decisions/adr-011-safe-fetch-ssrf-timeout-retry.md), [plan/03-safe-fetch-extract.md](../../plan/03-safe-fetch-extract.md) "기술 선택" 절
