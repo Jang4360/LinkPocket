@@ -1,0 +1,10 @@
+package com.linkpocket.link;
+
+enum FetchFailureReason {
+    SSRF_BLOCKED,
+    FETCH_TIMEOUT,
+    HTTP_CLIENT_ERROR,
+    HTTP_SERVER_ERROR,
+    CONTENT_TOO_LARGE,
+    EXTRACTION_FAILED
+}
