@@ -20,8 +20,8 @@ Spec-Driven Development(SDD): 카카오페이 spec-kit·토스 harness 사례처
 |---|---|---|---|---|---|---|
 | [00-walking-skeleton](00-walking-skeleton.md) | Gradle·Spring·Neon·Flyway·`/health` + Testcontainers 통합테스트가 CI green | — | 0 | 2~3 | 없음 | 진행 |
 | [01-auth-google-oauth](01-auth-google-oauth.md) | 웹/익스텐션 Google OAuth(PKCE)·세션·tenant 경계 + 공통 에러 프레임워크(1회 구축) | 00 | 1 | 6 | ✔ 세션 경계·토큰 회전([ADR-006](../decisions/adr-006-auth-session-architecture.md)) · 에러 계약([ADR-007](../decisions/adr-007-domain-error-code-contract.md)) | 완료 |
-| [02-link-save-minimal](02-link-save-minimal.md) | 익스텐션 저장 → Link 최소 보존 + 상태(persist만) | 01 | 1 | 3~5 | ✔✔ 멱등(user+canonical=1행)·동시 저장([ADR-010](../decisions/adr-010-link-idempotent-save.md)) | 승인 대기 |
-| 03-safe-fetch-extract | SSRF-safe fetch + 본문 추출 + 상태전이(AI 없이) | 02 | 2 | 4~6 | ✔ SSRF·timeout·크기 제한 | 대기 |
+| [02-link-save-minimal](02-link-save-minimal.md) | 익스텐션 저장 → Link 최소 보존 + 상태(persist만) | 01 | 1 | 3~5 | ✔✔ 멱등(user+canonical=1행)·동시 저장([ADR-010](../decisions/adr-010-link-idempotent-save.md)) | 완료 |
+| [03-safe-fetch-extract](03-safe-fetch-extract.md) | SSRF-safe fetch + 본문 추출 + 상태전이(AI 없이) | 02 | 2 | 4~6 | ✔ SSRF·timeout·크기 제한([ADR-011](../decisions/adr-011-safe-fetch-ssrf-timeout-retry.md)) | 승인 대기 |
 | 04-async-ai-pipeline | Job polling·요약·임베딩·pgvector 색인·상태머신·멱등 | 03 | 3 | 6~8 | ✔✔✔ job claim(SKIP LOCKED)·tx 경계·at-least-once | 대기 |
 | 05-categories | 카테고리 CRUD·다중 분류·제목/요약/분류 보정(+재색인) | 02 | 3~4 | 4~6 | ✔ 삭제=연결해제·보정 no-overwrite | 대기 |
 | 06-archive-and-search | 목록·카테고리 탐색·keyset pagination·자연어 시맨틱 검색 | 04,05 | 4 | 5~7 | ✔ tenant filter 서버 강제 | 대기 |
@@ -54,14 +54,14 @@ Spec-Driven Development(SDD): 카카오페이 spec-kit·토스 harness 사례처
 
 > Claude는 위험 지점에서 **먼저 묻고, 합의된 것만 계약(계약 테스트)으로 못박는다.** 여기서 사람이 고른 선택이 계약 테스트의 근거가 된다.
 
-## 기술 선택 아티클 — 결정 전에 학습 자료로 비교한다
+## 학습 아티클 — 결정 전에 개념·선택지를 정리한다
 
-위 위험 로직 트리거가 **"안전하게 만드는 법"**을 묻는다면, 이건 **"여러 정답 후보 중 뭘 고를지"**를 묻는 별도 축이다. 모든 plan마다 쓰지 않고, 아래 트리거에 걸릴 때만 [learning/articles/](../learning/articles/README.md)에 아티클을 먼저 쓴다.
+위 절차의 "선택지 + 트레이드오프 + Claude의 추천을 제시"하는 자리를, 채팅으로 흘려보내는 대신 [learning/articles/](../learning/articles/README.md)에 문서로 남긴다. 트리거는 두 갈래다.
 
-**트리거 — 하나라도 뚜렷하면 아티클을 쓴다:**
-- 이 프로젝트에 **처음 도입하는 기술/라이브러리/외부 서비스**가 있다.
-- 같은 문제에 **실질적으로 다른 구현 방식이 여럿** 존재하고 트레이드오프가 뚜렷하다.
-- [cs-learning](../learning/cs-learning.md)의 해당 축에 "선택지가 있다면" 항목이 이미 강하게 걸려 있다.
+- **위험 로직 자체(핵심)** — 이번 plan에 걸린 위험 로직 트리거(동시성·멱등성·트랜잭션 경계 등)마다 아티클을 쓴다. "정답이 unique constraint 하나뿐"처럼 보여도, **왜 다른 방법(낙관적 락·비관적 락·advisory lock 등)은 이 문제에 안 맞는지 설명하는 것 자체가 목적**이다. 이런 아티클은 plan을 넘나들며 재사용한다(예: "멱등성·동시성 제어 메커니즘" 하나가 plan-01·02·03에 전부 적용).
+- **기술/라이브러리 선택(부가)** — 처음 도입하는 기술/라이브러리가 있거나, cs-learning의 "선택지가 있다면" 항목이 강하게 걸릴 때.
+
+자세한 트리거·템플릿은 [learning/articles/README.md](../learning/articles/README.md) 참고.
 
 **시점:** 위 절차의 1(위험 지점 식별) 다음, 2(선택지 제시)의 **자리에** 쓴다 — 채팅으로 흘려보내는 대신 문서로 남겨 사람이 자기 속도로 검토하게 한다. 아티클은 **결정 전 비교 자료**일 뿐, **최종 결정은 항상 ADR에만** 남긴다(아티클에 결정 문구를 다시 적지 않는다 — 같은 내용이 두 곳에 있으면 나중에 어긋난다).
 
