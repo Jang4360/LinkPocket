@@ -26,6 +26,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.UUID;
 
@@ -33,6 +34,7 @@ import java.util.UUID;
 public class ExtensionAuthService {
 
     private static final long ACCESS_TOKEN_TTL_SECONDS = 900;
+    private static final long DEVICE_SESSION_MAX_AGE_DAYS = 14;
 
     private final AppUserRepository appUserRepository;
     private final DeviceSessionRepository deviceSessionRepository;
@@ -84,12 +86,17 @@ public class ExtensionAuthService {
         if (deviceSession.getRevokedAt() != null) {
             throw new DomainException(AuthErrorCode.AUTH_REFRESH_TOKEN_INVALID);
         }
+        Instant now = Instant.now();
+        if (deviceSession.getCreatedAt().isBefore(now.minus(DEVICE_SESSION_MAX_AGE_DAYS, ChronoUnit.DAYS))) {
+            deviceSession.revoke(now);
+            throw new DomainException(AuthErrorCode.AUTH_REFRESH_TOKEN_EXPIRED);
+        }
         if (refreshToken.getConsumedAt() != null) {
-            deviceSession.revoke(Instant.now());
+            deviceSession.revoke(now);
             throw new DomainException(AuthErrorCode.AUTH_REFRESH_TOKEN_REUSED);
         }
 
-        refreshToken.consume(Instant.now());
+        refreshToken.consume(now);
         return issueTokens(deviceSession);
     }
 
