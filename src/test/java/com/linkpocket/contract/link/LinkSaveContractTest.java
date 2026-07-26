@@ -20,11 +20,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *  - Flyway 마이그레이션 link(id uuid pk, user_id uuid references app_user(id), url text,
  *    canonical_url text, status text, created_at timestamptz) + unique(user_id, canonical_url)
  *  - POST /api/links, 요청 {url}, 인증 필요(세션의 userId 사용, 클라이언트 파라미터 무시)
- *    - 200 {linkId, canonicalUrl, status="PENDING"}
+ *    - 200 {linkId, canonicalUrl, status="PENDING", alreadyExisted}
+ *      alreadyExisted는 Postgres RETURNING ... (xmax = 0) AS inserted 같은 방식으로
+ *      추가 조회 없이 한 문장에서 판정한다(ADR-010 결정 3)
  *    - scheme이 http/https가 아니면 400 LINK_INVALID_URL
  *    - 인증 없으면 401 AUTH_SESSION_INVALID(AUTH 도메인, 이 plan에서 재정의 안 함)
- *  - canonical URL 정규화: scheme은 유지하되 비교 키에서 trailing slash·`www.` 유무를 통일
- *    (ADR-010 결정 2 — 최소 규칙만, tracking parameter는 제거하지 않음)
+ *  - canonical URL 정규화(ADR-010 결정 2, 2026-07-26 확장):
+ *    - scheme은 유지하되 비교 키에서 trailing slash·`www.` 유무를 통일(기존)
+ *    - 다음 추적 파라미터는 canonical 계산에서 제거: utm_source, utm_medium, utm_campaign,
+ *      utm_term, utm_content, gclid, fbclid, msclkid, mc_eid
+ *    - 목록에 없는 다른 쿼리 파라미터는 절대 건드리지 않는다(정규화 과잉 확대 금지)
  */
 class LinkSaveContractTest extends AbstractLinkContractTest {
 
@@ -54,7 +59,59 @@ class LinkSaveContractTest extends AbstractLinkContractTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.linkId").isNotEmpty())
                 .andExpect(jsonPath("$.canonicalUrl").isNotEmpty())
-                .andExpect(jsonPath("$.status").value("PENDING"));
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andExpect(jsonPath("$.alreadyExisted").value(false));
+    }
+
+    @Test
+    void saving_same_url_again_returns_already_existed_true_with_same_link_id() throws Exception {
+        String sub = seedUser("dup-user@example.com", "Dup User");
+        String url = "https://example.com/articles/dup";
+
+        MvcResult first = performSave(url, sub).andExpect(status().isOk()).andReturn();
+        MvcResult second = performSave(url, sub)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.alreadyExisted").value(true))
+                .andReturn();
+
+        assertThat(readJson(second).get("linkId").asText())
+                .isEqualTo(readJson(first).get("linkId").asText());
+    }
+
+    @Test
+    void known_tracking_parameters_are_stripped_for_canonical_equality() throws Exception {
+        String sub = seedUser("tracking-user@example.com", "Tracking User");
+
+        MvcResult first = performSave("https://example.com/articles/tracked", sub)
+                .andExpect(status().isOk())
+                .andReturn();
+        MvcResult second = performSave(
+                        "https://example.com/articles/tracked?utm_source=newsletter&utm_medium=email&fbclid=abc123",
+                        sub)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.alreadyExisted").value(true))
+                .andReturn();
+
+        assertThat(readJson(second).get("linkId").asText())
+                .as("알려진 추적 파라미터만 다른 URL은 같은 linkId여야 한다")
+                .isEqualTo(readJson(first).get("linkId").asText());
+    }
+
+    @Test
+    void unknown_query_parameters_are_not_stripped_and_stay_distinct() throws Exception {
+        String sub = seedUser("query-user@example.com", "Query User");
+
+        MvcResult first = performSave("https://example.com/search", sub)
+                .andExpect(status().isOk())
+                .andReturn();
+        MvcResult second = performSave("https://example.com/search?page=2", sub)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.alreadyExisted").value(false))
+                .andReturn();
+
+        assertThat(readJson(second).get("linkId").asText())
+                .as("추적 파라미터 목록에 없는 쿼리 파라미터는 정규화 대상이 아니다 — 정규화 과잉 확대 방지")
+                .isNotEqualTo(readJson(first).get("linkId").asText());
     }
 
     @Test

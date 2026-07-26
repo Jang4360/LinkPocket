@@ -3,9 +3,16 @@ package com.linkpocket.link;
 import com.linkpocket.common.error.DomainException;
 
 import java.net.URI;
+import java.util.Arrays;
+import java.util.Set;
 import java.util.Locale;
 
 final class CanonicalUrlNormalizer {
+
+    private static final Set<String> TRACKING_PARAMETERS = Set.of(
+            "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
+            "gclid", "fbclid", "msclkid", "mc_eid"
+    );
 
     String normalize(String rawUrl) {
         if (rawUrl == null || rawUrl.isBlank()) {
@@ -47,13 +54,32 @@ final class CanonicalUrlNormalizer {
         if (path != null) {
             canonical.append(path);
         }
-        if (uri.getRawQuery() != null) {
-            canonical.append('?').append(uri.getRawQuery());
+        String query = removeTrackingParameters(uri.getRawQuery());
+        if (query != null) {
+            canonical.append('?').append(query);
         }
         if (uri.getRawFragment() != null) {
             canonical.append('#').append(uri.getRawFragment());
         }
         return canonical.toString();
+    }
+
+    private String removeTrackingParameters(String rawQuery) {
+        if (rawQuery == null) {
+            return null;
+        }
+
+        String filteredQuery = Arrays.stream(rawQuery.split("&", -1))
+                .filter(parameter -> !TRACKING_PARAMETERS.contains(parameterName(parameter)))
+                .reduce((left, right) -> left + "&" + right)
+                .orElse("");
+
+        return filteredQuery.isEmpty() ? null : filteredQuery;
+    }
+
+    private String parameterName(String rawParameter) {
+        int separator = rawParameter.indexOf('=');
+        return separator == -1 ? rawParameter : rawParameter.substring(0, separator);
     }
 
     private boolean isHttpScheme(String scheme) {
