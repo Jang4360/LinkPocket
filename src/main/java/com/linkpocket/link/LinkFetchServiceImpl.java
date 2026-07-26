@@ -1,8 +1,10 @@
 package com.linkpocket.link;
 
+import jakarta.annotation.PreDestroy;
 import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
 import org.apache.hc.core5.http.ClassicHttpResponse;
 import org.apache.hc.core5.http.Header;
@@ -40,6 +42,8 @@ public class LinkFetchServiceImpl implements LinkFetchService {
     private final int connectTimeoutMillis;
     private final int responseTimeoutMillis;
     private final int readTimeoutMillis;
+    private final PoolingHttpClientConnectionManager connectionManager;
+    private final CloseableHttpClient httpClient;
 
     public LinkFetchServiceImpl(
             JdbcTemplate jdbcTemplate,
@@ -56,6 +60,19 @@ public class LinkFetchServiceImpl implements LinkFetchService {
         this.connectTimeoutMillis = connectTimeoutMillis;
         this.responseTimeoutMillis = responseTimeoutMillis;
         this.readTimeoutMillis = readTimeoutMillis;
+        this.connectionManager = PoolingHttpClientConnectionManagerBuilder.create()
+                .setDefaultSocketConfig(org.apache.hc.core5.http.io.SocketConfig.custom()
+                        .setSoTimeout(Timeout.ofMilliseconds(readTimeoutMillis))
+                        .build())
+                .build();
+        this.httpClient = HttpClients.custom()
+                .disableRedirectHandling()
+                .setDefaultRequestConfig(RequestConfig.custom()
+                        .setConnectTimeout(Timeout.ofMilliseconds(connectTimeoutMillis))
+                        .setResponseTimeout(Timeout.ofMilliseconds(responseTimeoutMillis))
+                        .build())
+                .setConnectionManager(connectionManager)
+                .build();
     }
 
     @Override
@@ -105,8 +122,8 @@ public class LinkFetchServiceImpl implements LinkFetchService {
         URI currentUri = initialUri;
         for (int redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
             assertSafeTarget(currentUri);
-            try (CloseableHttpClient client = newHttpClient()) {
-                ClassicHttpResponse response = client.executeOpen(null,
+            try {
+                ClassicHttpResponse response = httpClient.executeOpen(null,
                         new org.apache.hc.client5.http.classic.methods.HttpGet(currentUri), null);
                 try (response) {
                     int status = response.getCode();
@@ -145,20 +162,9 @@ public class LinkFetchServiceImpl implements LinkFetchService {
         throw new FetchException(FetchFailureReason.HTTP_CLIENT_ERROR, false);
     }
 
-    private CloseableHttpClient newHttpClient() {
-        RequestConfig requestConfig = RequestConfig.custom()
-                .setConnectTimeout(Timeout.ofMilliseconds(connectTimeoutMillis))
-                .setResponseTimeout(Timeout.ofMilliseconds(responseTimeoutMillis))
-                .build();
-        return HttpClients.custom()
-                .disableRedirectHandling()
-                .setDefaultRequestConfig(requestConfig)
-                .setConnectionManager(PoolingHttpClientConnectionManagerBuilder.create()
-                        .setDefaultSocketConfig(org.apache.hc.core5.http.io.SocketConfig.custom()
-                                .setSoTimeout(Timeout.ofMilliseconds(readTimeoutMillis))
-                                .build())
-                        .build())
-                .build();
+    @PreDestroy
+    void closeHttpClient() throws IOException {
+        httpClient.close();
     }
 
     private String readBody(InputStream inputStream) throws IOException, FetchException {
