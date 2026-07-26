@@ -35,8 +35,7 @@
 | `AUTH_OAUTH_CODE_EXCHANGE_FAILED` | 502 | 토스트("Google 로그인에 실패했습니다. 잠시 후 다시 시도해주세요.") | BE 기본값 |
 | `AUTH_REFRESH_TOKEN_INVALID` | 401 | 전체 화면 리다이렉트(익스텐션 재로그인) | BE 기본값 |
 | `AUTH_REFRESH_TOKEN_REUSED` | 401 | **전체 화면 리다이렉트 + 보안 경고 토스트**("비정상적인 로그인 시도가 감지되어 모든 세션이 종료되었습니다.") — family 전체 폐기됐음을 사용자에게 알림 | FE 재정의(보안 경고 문구는 FE가 강조 스타일로 표시) |
-| `AUTH_FORBIDDEN_RESOURCE` | 403 | 토스트("접근 권한이 없습니다.") — IDOR 방어 발동 시. 리소스 존재 자체를 숨겨야 하는 곳은 `AUTH_RESOURCE_NOT_FOUND`(404)로 대체 | BE 기본값 |
-| `AUTH_RESOURCE_NOT_FOUND` | 404 | 인라인("찾을 수 없습니다") 또는 목록에서 조용히 제외 | FE 재정의 |
+| `AUTH_RESOURCE_NOT_FOUND` | 404 | 인라인("찾을 수 없습니다") 또는 목록에서 조용히 제외 — **남의 리소스 접근 시도도 이 코드로 통일**(존재 여부를 숨김, 2026-07-26 회고, [architecture/api-error-contract.md](../architecture/api-error-contract.md) 원칙) | FE 재정의 |
 | `AUTH_PKCE_VERIFICATION_FAILED` | 400 | 토스트 + 로그인 재시작 | BE 기본값 |
 
 이 표는 위 "실패 조건" 절의 각 케이스에 대응한다. **구현 중 실패 조건이 추가되면 이 표도 함께 갱신한다** — 표와 enum 상수가 항상 1:1이어야 한다(architecture/api-error-contract.md 4절 검증 원칙).

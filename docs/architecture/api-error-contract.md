@@ -39,6 +39,8 @@ public interface ErrorCode {
 ```
 
 - 도메인 예외는 이 `ErrorCode`를 들고 던지고(`DomainException(ErrorCode code, Object... args)`), **전역 예외 핸들러 하나**가 모든 도메인 예외를 위 envelope로 직렬화한다. 새 도메인은 enum만 추가하면 되고, 직렬화·핸들러 로직은 건드리지 않는다.
+
+**원칙 — 리소스 존재 여부를 숨긴다(IDOR 방어, 2026-07-26 회고에서 확정):** 인증된 사용자가 **남의 리소스**(자기 소유가 아닌 ID)에 접근을 시도하면, "권한 없음"(403)과 "존재하지 않음"(404)을 **구분해서 응답하지 않는다.** 둘 다 해당 도메인의 `_NOT_FOUND`류 코드(404)로 통일한다. 403을 따로 주면 "이 ID는 존재는 한다"는 정보가 공격자에게 새어나간다(OWASP IDOR 권고 — [사례: AUTH_FORBIDDEN_RESOURCE 제거](../decisions/adr-007-domain-error-code-contract.md)). **도메인 자체에 대한 접근(로그인 여부 등)은 이 규칙과 별개**다 — 그건 401/403을 그대로 쓴다(예: `AUTH_SESSION_INVALID`). 이 규칙은 오직 "특정 소유물 리소스 ID"에 대한 접근에만 적용된다.
 - **HTTP status와 비즈니스 코드는 분리된 축이다.** HTTP status는 범용 처리(401→재인증 필요, 404→리소스 없음, 429→재시도)를 위한 것이고, 비즈니스 코드는 "정확히 무슨 일이 났고 화면에 뭘 보여줄지"를 위한 것이다. 같은 401이라도 `AUTH_SESSION_EXPIRED`(조용히 재로그인 유도)와 `AUTH_REFRESH_TOKEN_REUSED`(보안 경고 + 강제 로그아웃)는 화면 처리가 다르다.
 
 ## 3. 도메인 에러 코드 표 (plan 문서에 채우는 형식)
