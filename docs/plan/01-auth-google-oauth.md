@@ -35,6 +35,7 @@
 | `AUTH_OAUTH_CODE_EXCHANGE_FAILED` | 502 | 토스트("Google 로그인에 실패했습니다. 잠시 후 다시 시도해주세요.") | BE 기본값 |
 | `AUTH_REFRESH_TOKEN_INVALID` | 401 | 전체 화면 리다이렉트(익스텐션 재로그인) | BE 기본값 |
 | `AUTH_REFRESH_TOKEN_REUSED` | 401 | **전체 화면 리다이렉트 + 보안 경고 토스트**("비정상적인 로그인 시도가 감지되어 모든 세션이 종료되었습니다.") — family 전체 폐기됐음을 사용자에게 알림 | FE 재정의(보안 경고 문구는 FE가 강조 스타일로 표시) |
+| `AUTH_REFRESH_TOKEN_EXPIRED` | 401 | 전체 화면 리다이렉트(익스텐션 재로그인) — "로그인이 만료됐습니다. 다시 로그인해주세요."(탈취 경고 아님, 담담한 안내) — 2026-07-27 확정, ADR-006 결정 3 재검토(14일 고정 만료) | BE 기본값 |
 | `AUTH_RESOURCE_NOT_FOUND` | 404 | 인라인("찾을 수 없습니다") 또는 목록에서 조용히 제외 — **남의 리소스 접근 시도도 이 코드로 통일**(존재 여부를 숨김, 2026-07-26 회고, [architecture/api-error-contract.md](../architecture/api-error-contract.md) 원칙) | FE 재정의 |
 | `AUTH_PKCE_VERIFICATION_FAILED` | 400 | 토스트 + 로그인 재시작 | BE 기본값 |
 
