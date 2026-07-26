@@ -4,10 +4,13 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+  session:
+    store-type: jdbc
+    jdbc:
+      initialize-schema: never
 
 management:
   endpoints:
     web:
       exposure:
         include: health
-
