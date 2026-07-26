@@ -22,6 +22,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
+    implementation("org.apache.httpcomponents.client5:httpclient5")
+    implementation("net.dankito.readability4j:readability4j:1.0.8")
     implementation("org.springframework.session:spring-session-jdbc")
     implementation("org.flywaydb:flyway-core")
     implementation("org.flywaydb:flyway-database-postgresql")
