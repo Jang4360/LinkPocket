@@ -20,6 +20,7 @@ import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -31,7 +32,7 @@ public class LinkFetchServiceImpl implements LinkFetchService {
 
     private static final int MAX_ATTEMPTS = 3;
     private static final int MAX_REDIRECTS = 5;
-    private static final int MAX_CONTENT_BYTES = 5 * 1024 * 1024;
+    private static final int MAX_CONTENT_BYTES = 20 * 1024 * 1024;
 
     private final JdbcTemplate jdbcTemplate;
     private final ContentExtractor contentExtractor = new ContentExtractor();
@@ -127,6 +128,9 @@ public class LinkFetchServiceImpl implements LinkFetchService {
                     if (status < 200 || status >= 300) {
                         throw new FetchException(FetchFailureReason.HTTP_CLIENT_ERROR, false);
                     }
+                    if (!isHtmlContentType(response.getFirstHeader("Content-Type"))) {
+                        throw new FetchException(FetchFailureReason.UNSUPPORTED_CONTENT_TYPE, false);
+                    }
                     return new FetchedPage(currentUri, readBody(response.getEntity().getContent()));
                 }
             } catch (SocketTimeoutException exception) {
@@ -214,6 +218,14 @@ public class LinkFetchServiceImpl implements LinkFetchService {
 
     private boolean isRedirect(int status) {
         return status == 301 || status == 302 || status == 303 || status == 307 || status == 308;
+    }
+
+    private boolean isHtmlContentType(Header contentType) {
+        if (contentType == null) {
+            return false;
+        }
+        String value = contentType.getValue().toLowerCase(Locale.ROOT);
+        return value.startsWith("text/html") || value.startsWith("application/xhtml+xml");
     }
 
     private boolean hasTimeoutCause(Throwable throwable) {
