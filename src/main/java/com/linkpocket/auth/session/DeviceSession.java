@@ -50,6 +50,10 @@ public class DeviceSession {
         return revokedAt;
     }
 
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
     public void revoke(Instant revokedAt) {
         this.revokedAt = revokedAt;
     }
