@@ -43,7 +43,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/actuator/health", "/api/extension/**").permitAll()
                         .requestMatchers("/api/me").authenticated()
-                        .requestMatchers("/api/logout").permitAll()
+                        .requestMatchers("/api/logout").authenticated()
                         .anyRequest().permitAll()
                 )
                 .exceptionHandling(exceptionHandling -> exceptionHandling

@@ -1,7 +1,6 @@
 package com.linkpocket.contract.auth;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -83,11 +82,23 @@ class WebSessionContractTest extends AbstractAuthContractTest {
         assertThat(sessionCookie).containsIgnoringCase("SameSite=Lax");
     }
 
+    /**
+     * 주의(Spring Session + oauth2Login() 테스트 postprocessor의 알려진 한계): oauth2Login()은
+     * 필터 체인이 돌기 전에 요청의 세션에 직접 SecurityContext를 심는 방식으로 동작한다. 세션
+     * 저장소가 인메모리일 때는 문제없지만, Spring Session이 세션 객체 자체를 필터에서 감싸는
+     * 방식으로 바뀌면 oauth2Login()이 심은 속성이 Spring Session이 실제로 추적·저장하는 세션과
+     * 다른 객체에 남아 DB(spring_session_attributes)에 영속되지 않는다(직접 확인함 — 로그인 후
+     * 그 테이블에 row가 0개였다). 그래서 "쿠키만으로 재요청" 방식으로는 세션 영속 여부 자체를
+     * 검증할 수 없다 — 인증이 안 걸린 것처럼 보이는 게 세션이 무효화돼서인지 애초에 이 테스트
+     * 기법의 한계인지 구분이 안 된다. 따라서 로그아웃의 핵심 불변조건(DB에 영속된 세션 row가
+     * 실제로 사라진다)은 DB를 직접 조회해 검증하고, 로그아웃 자체는 oauth2Login()을 다시 걸어
+     * "인증된 사용자가 로그아웃을 호출한다"는 시나리오를 재현한다.
+     */
     @Test
-    void logout_invalidates_session_and_subsequent_me_returns_401() throws Exception {
+    void logout_removes_the_persisted_session_row_from_db() throws Exception {
         String sub = seedUser("logout-user@example.com", "Logout User");
+        int sessionsBeforeLogin = countPersistedSessions();
 
-        // 1) 최초 요청으로 실제 서버 세션에 인증 컨텍스트를 심는다.
         MvcResult loginResult = mockMvc.perform(get("/api/me")
                         .with(SecurityMockMvcRequestPostProcessors.oauth2Login()
                                 .attributes(a -> {
@@ -97,17 +108,37 @@ class WebSessionContractTest extends AbstractAuthContractTest {
                                 })))
                 .andExpect(status().isOk())
                 .andReturn();
-        MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
-        org.assertj.core.api.Assertions.assertThat(session).as("인증 후 서버 세션이 존재해야 한다").isNotNull();
 
-        // 2) 같은 세션으로 로그아웃 — oauth2Login()을 다시 적용하지 않고 세션만 재사용한다
-        //    (매 요청마다 oauth2Login()을 새로 걸면 서버 세션 무효화를 검증할 수 없다).
-        mockMvc.perform(post("/api/logout").session(session))
+        org.assertj.core.api.Assertions.assertThat(countPersistedSessions())
+                .as("로그인 후 세션이 DB에 실제로 영속돼야 한다")
+                .isEqualTo(sessionsBeforeLogin + 1);
+
+        // oauth2Login()은 "인증된 사용자가 호출한다"는 조건을 재현하기 위해 다시 걸고, 로그인 때
+        // 받은 쿠키(세션 ID)도 함께 보내 로그아웃이 "바로 그 세션"을 무효화하는지 확인한다.
+        mockMvc.perform(post("/api/logout")
+                        .cookie(loginResult.getResponse().getCookies())
+                        .with(SecurityMockMvcRequestPostProcessors.oauth2Login()
+                                .attributes(a -> {
+                                    a.put("sub", sub);
+                                    a.put("email", "logout-user@example.com");
+                                    a.put("name", "Logout User");
+                                })))
                 .andExpect(status().isNoContent());
 
-        // 3) 같은(무효화된) 세션으로 재요청하면 인증되지 않은 것으로 취급돼야 한다.
-        mockMvc.perform(get("/api/me").session(session))
+        org.assertj.core.api.Assertions.assertThat(countPersistedSessions())
+                .as("로그아웃 후 DB에 영속된 세션 row는 실제로 삭제돼야 한다")
+                .isEqualTo(sessionsBeforeLogin);
+    }
+
+    @Test
+    void unauthenticated_me_without_any_session_is_rejected() throws Exception {
+        mockMvc.perform(get("/api/me"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("AUTH_SESSION_INVALID"));
+    }
+
+    private int countPersistedSessions() {
+        Integer count = jdbcTemplate.queryForObject("select count(*) from spring_session", Integer.class);
+        return count == null ? 0 : count;
     }
 }
