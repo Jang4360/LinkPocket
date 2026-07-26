@@ -16,6 +16,8 @@
 | (예) 2026-07-20 | tx-boundary | 외부 HTTP 호출이 트랜잭션 안에 들어감 | Claude 리뷰 | – |
 | 2026-07-16 | contract-test-authoring | 계약 테스트 Javadoc의 `**/contract/**`가 `*/`로 주석을 조기 종료 → 컴파일 오류 | Codex 게이트(우회 없이 에스컬레이션) → Claude 교정 | – (1회, 교정만) |
 | 2026-07-16 | contract-test-authoring | WireMock 정적 `stubFor(...)`가 기본 포트(8080)로 등록돼 동적 포트 서버(GOOGLE)와 불일치 → 404 | Codex 게이트(우회 없이 에스컬레이션) → Claude 교정(`GOOGLE.stubFor`로 변경) | **승격 후보(2회째)** — development-loop 참고, 사람 승인 대기 |
+| 2026-07-26 | contract-test-authoring | SSRF test-only 허용 목록에 `127.0.0.1`을 하드코딩했는데 `WireMockServer.baseUrl()`이 실제로는 `localhost`를 반환 → 정상 origin 요청까지 SSRF_BLOCKED | Codex 게이트(우회 없이 에스컬레이션) → Claude 교정(하드코딩 대신 `ORIGIN.baseUrl()`에서 직접 파싱) | **3회째 — 승격 필수** (development-loop 정책), 아래 참고 |
+| 2026-07-26 | adr-implementation-drift | ADR-006 결정 1이 "서버 세션 스토어(DB)"를 명시했는데 실제 구현은 Tomcat 기본 인메모리 세션 — 계약 테스트가 영속성을 검증 안 해 안 잡힘 | plan-01 회고(사람 주도 문제 재정의 세션) | – (1회, 후속 task로 수정 결정) |
 
 ## 카테고리 예시 (필요하면 자라남)
 
