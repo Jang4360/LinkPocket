@@ -22,8 +22,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  *  - timeout 초과 시 최대 2회까지 재시도(총 3회 시도) 후에도 실패하면 FAILED/FETCH_TIMEOUT
  *  - 429/5xx도 같은 재시도 정책(최대 2회, 총 3회 시도) 후 실패하면 FAILED/HTTP_SERVER_ERROR
  *  - 4xx는 재시도 없이 즉시 FAILED/HTTP_CLIENT_ERROR(총 1회 시도)
- *  - 압축 해제 후 응답 본문이 5MB를 넘으면 그 시점에서 중단하고 FAILED/CONTENT_TOO_LARGE
+ *  - 압축 해제 후 응답 본문이 20MB를 넘으면 그 시점에서 중단하고 FAILED/CONTENT_TOO_LARGE
  *    (Content-Length 헤더만 보고 판단하지 않는다 — 실제로 읽은 바이트 수 기준)
+ *  - Content-Type이 HTML이 아니면(예: application/pdf) 본문을 읽기 전에 즉시
+ *    FAILED/UNSUPPORTED_CONTENT_TYPE으로 중단(2026-07-27 회고 추가)
  */
 class LinkFetchRetryAndLimitsContractTest extends AbstractLinkFetchContractTest {
 
@@ -69,8 +71,8 @@ class LinkFetchRetryAndLimitsContractTest extends AbstractLinkFetchContractTest 
     }
 
     @Test
-    void body_over_five_megabytes_is_rejected() throws Exception {
-        String oversizedBody = "a".repeat(5 * 1024 * 1024 + 1024);
+    void body_over_twenty_megabytes_is_rejected() throws Exception {
+        String oversizedBody = "a".repeat(20 * 1024 * 1024 + 1024);
         ORIGIN.stubFor(get(urlEqualTo("/huge"))
                 .willReturn(aResponse().withStatus(200).withHeader("Content-Type", "text/html")
                         .withBody(oversizedBody)));
@@ -81,5 +83,19 @@ class LinkFetchRetryAndLimitsContractTest extends AbstractLinkFetchContractTest 
         Map<String, Object> link = loadLink(linkId);
         assertThat(link.get("status")).isEqualTo("FAILED");
         assertThat(link.get("failure_reason")).isEqualTo("CONTENT_TOO_LARGE");
+    }
+
+    @Test
+    void pdf_content_type_is_rejected_without_reading_body() throws Exception {
+        ORIGIN.stubFor(get(urlEqualTo("/document.pdf"))
+                .willReturn(aResponse().withStatus(200).withHeader("Content-Type", "application/pdf")
+                        .withBody("%PDF-1.4 fake pdf bytes")));
+
+        UUID linkId = seedPendingLink(originUrl("/document.pdf"));
+        linkFetchService.fetchAndExtract(linkId);
+
+        Map<String, Object> link = loadLink(linkId);
+        assertThat(link.get("status")).isEqualTo("FAILED");
+        assertThat(link.get("failure_reason")).isEqualTo("UNSUPPORTED_CONTENT_TYPE");
     }
 }

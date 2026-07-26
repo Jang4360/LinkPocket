@@ -18,7 +18,8 @@
 - [ ] 최초 hostname은 공인 IP였으나 redirect 대상이 위 차단 대역으로 해석되면, 그 redirect를 따라가지 않고 `FAILED`(`SSRF_BLOCKED`)로 전이한다.
 - [ ] connect timeout(3s)을 초과하면 재시도 후에도 실패 시 `FAILED`(사유: `FETCH_TIMEOUT`, 재시도 가능 표시).
 - [ ] `429`/일부 `5xx`는 최대 2회까지 backoff+jitter로 재시도한다. 재시도 후에도 실패하면 `FAILED`(재시도 가능 표시), `4xx`는 즉시 `FAILED`(재시도 불가 표시)로 전이한다.
-- [ ] 압축 해제 후 본문이 5MB를 넘으면 그 시점에서 fetch를 중단하고 `FAILED`(사유: `CONTENT_TOO_LARGE`)로 전이한다.
+- [ ] 압축 해제 후 본문이 20MB를 넘으면 그 시점에서 fetch를 중단하고 `FAILED`(사유: `CONTENT_TOO_LARGE`)로 전이한다.
+- [ ] 응답의 `Content-Type`이 `application/pdf` 등 HTML이 아니면 본문을 읽지 않고 즉시 `FAILED`(사유: `UNSUPPORTED_CONTENT_TYPE`, 재시도 불가)로 전이한다 — HTML은 받았지만 본문을 못 찾은 경우(`EXTRACTION_FAILED`)와 구분한다.
 - [ ] HTML은 정상적으로 받았지만 본문 추출이 실패하면(추출 라이브러리가 본문 블록을 못 찾음) `READY_WITHOUT_CONTENT`로 전이한다 — fetch 실패(`FAILED`)와 구분한다.
 - [ ] 위 모든 실패 경로에서 Link row 자체는 삭제되지 않고 URL·fallback title은 그대로 보존된다.
 - [ ] 같은 Link에 `fetchAndExtract`가 동시에 두 번 호출되면, 한쪽만 실제로 fetch를 수행하고 다른 쪽은 즉시 no-op으로 반환한다(중복 fetch 방지).
@@ -34,14 +35,15 @@
 - 사설/loopback/link-local/메타데이터 IP로 fetch를 실제로 시도하면 실패(설계 위반).
 - redirect 대상의 IP를 재검증하지 않고 따라가면 실패.
 - 4xx 응답에 재시도를 시도하면 실패(재시도 예산 낭비).
-- 5MB를 초과하는 본문을 끝까지 메모리에 올리면 실패.
+- 20MB를 초과하는 본문을 끝까지 메모리에 올리면 실패.
+- `application/pdf` 등 비-HTML 응답의 본문을 읽어 추출을 시도하면 실패(형식 검사보다 먼저 본문을 읽으면 안 됨).
 - fetch 실패 시 Link row나 URL·fallback title이 함께 사라지면 실패.
 - 동시 호출 두 개가 모두 실제 fetch를 수행하면(중복 요청·중복 상태 전이 시도) 실패.
 
 ## 위험 로직 결정 (합의 완료 — [ADR-011](../decisions/adr-011-safe-fetch-ssrf-timeout-retry.md))
 - SSRF 방어 깊이: DNS 해석 후 IP 검증 + redirect마다 재검증 → ADR-011 결정 1
 - Timeout 구조: connect 3s / 응답(TTFB) 5s / 읽기 전체 15s → ADR-011 결정 2
-- 재시도·크기 제한: timeout·429·일부 5xx만 최대 2회 재시도, 본문 5MB 상한 → ADR-011 결정 3
+- 재시도·크기 제한: timeout·429·일부 5xx만 최대 2회 재시도, 본문 20MB 상한 → ADR-011 결정 3
 - 중복 fetch 방지: `link.status` 원자적 조건부 UPDATE(`PENDING→FETCHING`)로 선점 → ADR-011 결정 4
 
 ## 기술 선택 (pre-hoc 아티클 근거 — 결정은 이 plan에서)
@@ -56,7 +58,8 @@
 | `FETCH_TIMEOUT` | connect/응답/읽기 timeout | 예 |
 | `HTTP_CLIENT_ERROR` | 4xx 응답 | 아니오 |
 | `HTTP_SERVER_ERROR` | 재시도 후에도 실패한 5xx/429 | 예(다음 수동 재처리 때) |
-| `CONTENT_TOO_LARGE` | 압축 해제 후 5MB 초과 | 아니오(URL 자체 문제) |
+| `CONTENT_TOO_LARGE` | 압축 해제 후 20MB 초과 | 아니오(URL 자체 문제) |
+| `UNSUPPORTED_CONTENT_TYPE` | `Content-Type`이 HTML이 아님(PDF 등) | 아니오(형식 자체 문제) |
 | `EXTRACTION_FAILED` | 본문 추출 실패(fetch는 성공) → `READY_WITHOUT_CONTENT`로 전이, `FAILED` 아님 | 해당 없음 |
 
 ## API 계약 — 해당 없음
@@ -65,7 +68,7 @@
 ## 구현 계획 (AI가 따를 단계)
 1. **실패 테스트 먼저** — SSRF 차단(사설 IP·redirect 우회), timeout 3종, 재시도 정책(4xx 즉시/5xx 제한 재시도), 크기 상한, 추출 실패 시 `READY_WITHOUT_CONTENT` 전이.
 2. Flyway 마이그레이션 — `link`에 `failure_reason text`, `fetched_at timestamptz` 컬럼 추가, `status`에 `FETCHING` 값 허용(V5).
-3. `SafeFetcher` — Apache HttpClient5 위에 커스텀 DNS resolver(IP 검증) + redirect handler(hop마다 재검증) + 3구간 timeout 설정.
+3. `SafeFetcher` — Apache HttpClient5 위에 커스텀 DNS resolver(IP 검증) + redirect handler(hop마다 재검증) + 3구간 timeout 설정. 응답 헤더의 `Content-Type`을 **본문을 읽기 전에** 검사해 HTML이 아니면 즉시 `UNSUPPORTED_CONTENT_TYPE`으로 중단(20MB 상한 검사와 마찬가지로 본문을 다 받고 나서 판단하지 않는다).
 4. `ContentExtractor` — readability4j 래핑, 실패 시 예외가 아니라 "추출 결과 없음"을 반환(호출자가 `READY_WITHOUT_CONTENT`로 매핑).
 5. `LinkFetchService.fetchAndExtract(linkId)` — 먼저 `UPDATE link SET status='FETCHING' WHERE id=? AND status='PENDING'`으로 선점(0 row면 즉시 반환) → fetch·추출 → 최종 상태 전이, `FetchFailureReason` 기록.
 
