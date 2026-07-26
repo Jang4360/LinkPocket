@@ -86,6 +86,7 @@
 4. **계약(불변식)이 잘못됐다고 생각되면** 구현을 비틀지 말고 plan 수정을 Claude·사람에게 제안하라.
 5. **계획 밖 파일을 건드리지 마라.** diff는 해당 plan 범위 안에 둔다.
 6. **PR·커밋 메시지는 한국어로 쓴다.** 아래 "PR·커밋 언어 규칙" 참고.
+7. **(Claude, 계약 테스트 작성 시) test-only 설정값을 하드코딩하지 마라.** WireMock host·port 등 테스트 인프라가 실제로 만드는 값은 그 인프라 객체에서 직접 읽어와 쓴다(예: `ORIGIN.baseUrl()`에서 host를 파싱). 짐작한 리터럴 문자열을 적어두면 인프라 버전·환경에 따라 실제 값과 어긋난다 — `contract-test-authoring` 카테고리로 3회 반복돼 승격됨([mistake-ledger.md](operations/mistake-ledger.md)).
 
 ## 정지 조건 (STOP CONDITIONS)
 
