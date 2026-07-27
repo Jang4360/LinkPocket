@@ -67,6 +67,7 @@ PENDING → FETCHING → FETCHED → SUMMARIZING → SUMMARIZED → CHUNKING →
 | `SUMMARIZE_API_ERROR` | OpenAI API 호출 실패(5xx/timeout) | 예(최대 2회, lease 만료로 재claim) |
 | `SUMMARIZE_CONTENT_REJECTED` | 콘텐츠 정책 거부 등(4xx류) | 아니오(즉시 확정) |
 | `EMBEDDING_API_ERROR` | 임베딩 API 호출 실패(5xx/timeout) | 예(최대 2회) |
+| `EMBEDDING_CONTENT_REJECTED` | 임베딩 API가 4xx로 거부(콘텐츠 정책 등) | 아니오(즉시 확정) |
 | `CHUNKING_FAILED` | 청킹 단계 내부 오류(빈 본문 등) | 아니오(즉시 확정) |
 | `INDEX_WRITE_FAILED` | pgvector upsert 실패 | 예(최대 2회) |
 

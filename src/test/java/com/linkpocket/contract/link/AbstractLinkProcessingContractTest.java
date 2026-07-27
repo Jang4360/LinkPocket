@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -42,7 +43,12 @@ import java.util.function.Supplier;
  *    이름은 Codex 재량, 이 계약은 `link.status`·`link.extracted_title`·`link.extracted_body`·
  *    `link.failure_reason`과 위 두 컬럼만으로 검증한다.
  */
+// 주의: @TestConfiguration 중첩 클래스의 자동 인식은 "실제 실행되는 서브클래스"의
+// declaredClasses만 보고, 이 상속 원본(추상 클래스)의 중첩 클래스는 보지 않는다 —
+// 그래서 명시적으로 @Import를 걸어야 한다(자동 인식에 의존하면 서브클래스에서 Fake 빈이
+// 등록되지 않아 NoSuchBeanDefinitionException이 난다, 실제로 겪은 문제).
 @SpringBootTest
+@Import(AbstractLinkProcessingContractTest.FakeGeneratorsConfig.class)
 abstract class AbstractLinkProcessingContractTest {
 
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
