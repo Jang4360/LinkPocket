@@ -3,27 +3,29 @@
 > 다음 세션(사람이든 Claude·Codex든)이 `git log`·`git status`·PR 목록을 매번 재구성하지 않도록, 의미 있는 작업 단위가 끝날 때마다 이 파일을 갱신한다. **최신 상태만 남긴다** — 과거 이력은 git log가 이미 갖고 있으니 여기 쌓지 않는다.
 
 ## 완료
-- plan-02(link-save-minimal) 전체 완료·머지(PR #12). unique constraint + `INSERT ON CONFLICT` 원자적 upsert, canonical URL 최소 정규화. PR #11(계약 테스트만)은 흡수돼 닫음.
-- plan-03(safe-fetch-extract) 위험 로직 합의 완료 → [ADR-011](../decisions/adr-011-safe-fetch-ssrf-timeout-retry.md) 작성(SSRF 방어 깊이·timeout 구조·재시도/크기 제한·중복 fetch 방지) → [plan/03-safe-fetch-extract.md](../plan/03-safe-fetch-extract.md) 초안.
-- **학습 아티클 정책 재수정**: 트리거를 "새 기술 도입" 위주에서 **"위험 로직(동시성·멱등성 등) 자체"를 핵심 트리거로** 확장. plan-02를 "unique constraint가 유일한 정답이라 아티클 불필요"로 판단했던 게 오판이었음 — 왜 다른 방법(낙관적 락 등)이 안 맞는지 설명하는 것 자체가 가치였다. `learning/articles/README.md`·`plan/README.md` 갱신.
-- 새 개념 아티클 [idempotency-and-concurrency-control.md](../learning/articles/idempotency-and-concurrency-control.md) 작성 — unique constraint·비관적 락·낙관적 락·조건부 UPDATE·advisory lock을 plan-01/02/03 실제 코드로 설명. plan을 넘나드는 재사용 아티클(매 plan마다 새로 안 씀, 적용 사례만 추가).
+- **plan-01(auth) 완전히 완료.** PKCE·rotation/reuse detection·DB 세션 저장소(Spring Session JDBC)·**익스텐션 refresh token 14일 고정 만료**(rotation은 유지, 그 위에 로그인 유지 기간 상한만 추가)까지 전부 머지됨.
+- **plan-02(link-save) 완전히 완료.** 멱등 저장(unique constraint+ON CONFLICT) + 확장(저장 취소/조회 토글, `alreadyExisted` 플래그, 추적 파라미터 제거) 전부 머지됨.
+- **plan-03(safe-fetch-extract) 완전히 완료.** SSRF 방어(DNS+IP+redirect 재검증)·timeout 3구간·재시도·20MB 상한·PDF 거부·중복 fetch 방지·본문 추출(readability4j) 전부 머지됨.
+- **개발 프로세스 자체를 개정함(가장 중요한 변화)**: Claude가 위험 로직 결정 시 이제 **선택지를 주기 전에 사용자 가치·품질 기준을 먼저 질문**한다(plan/README.md). ADR 템플릿은 6단계 구조(문제 정의→가설→대안→선택→관찰 지표→결과, decisions/README.md)로 개정됨. 이미 구현된 plan-01/02/03도 이 프레임워크로 회고해 실제 구현과 결정이 일치하는지 검증했고, 그 과정에서 실제 버그 2건(세션이 DB가 아닌 인메모리였던 것, 커넥션 풀 미재사용)과 보안 완화 시도 1건(Codex가 테스트 우회하려 `/api/logout` 권한을 풀었던 것)을 잡았다.
+- 학습 아티클 정책 확정: pre-hoc만 사용, 트리거는 "위험 로직 자체"(①)와 "백엔드 핵심 주제 체크리스트"(②, learning/articles/README.md에 5개 영역 명시)로 두 갈래. 기존 아티클: `idempotency-and-concurrency-control.md`(plan-01/02/03 전체 적용), `html-extraction-...`, `chunking-strategy-...`, `dense-bm25-hybrid-retrieval`(plan-04/06용, 아직 미적용).
+- mistake-ledger: `contract-test-authoring`(test-only 값 하드코딩 금지) 3회 승격 완료 → development-loop.md 규칙 7. `adr-implementation-drift`(ADR과 실제 구현 불일치) 신설 카테고리, 1회.
 
 ## 결정과 근거
-- 학습 아티클 트리거 2갈래: ①기술/라이브러리 선택(가벼움) ②위험 로직-메커니즘 선택(핵심, 이 프로젝트 무게중심). "선택지가 하나뿐"이어도 왜 그런지 설명하는 게 ②의 목적이라 생략 사유가 안 됨.
-- plan-03 스코프: 공개 API 없음, `LinkFetchService.fetchAndExtract(linkId)` 서비스 메서드까지만 — 트리거(언제 호출하는지)는 job polling 인프라를 가진 plan-04 소관. (plan-03.md에 "사람 대조 필요"로 명시해둠, 아직 확인 안 됨)
-- plan-03 중복 fetch 방지는 별도 멱등 테이블 대신 `link.status` 원자적 조건부 UPDATE(`PENDING→FETCHING`)로 — plan-01/02와 같은 패턴 재사용, plan-04의 job 인프라 설계와 겹치지 않게.
+- ADR-006 결정 3 최종본: rotation/reuse-detection(탈취 감지)은 그대로 두고 `device_session.created_at` 기준 **14일 고정 만료**(슬라이딩 아님)만 추가. "rotation을 대체"가 아니라 "그 위에 얹는다"는 점이 중요 — 회고 대화 중 범위를 잘못 이해할 뻔했다가 바로잡음.
+- 리뷰 시 발견한 문제는 즉시 Codex에게 재작업을 요청하는 걸 표준 절차로 삼음(승인 없이 진행하지 않되, 발견 즉시 사람에게 보고 후 재작업 프롬프트 전달).
 
 ## 미완료
-- plan-03.md·ADR-011이 초안 상태 — 사람 승인(계약 승인 ①) 전. 특히 "공개 API 없음" 스코프 판단 확인 필요.
-- 승인되면 Claude가 fetch 계약 테스트(빨강) 작성 — WireMock으로 SSRF 시나리오(사설 IP·redirect 우회) 재현 필요.
-- `/tmp/lp-wt-plan03` worktree(브랜치 `plan/03-safe-fetch-extract`)에 커밋 안 된 상태로 존재.
+- 없음 — plan-01/02/03 관련 열린 PR·미실행 결정 전부 해소됨(2026-07-27 기준).
 
 ## 다음 시작점
-- plan-03.md·ADR-011 승인 여부 확인(스코프 판단 포함) → 승인되면 Claude가 계약 테스트 작성.
+- **plan-04(async-ai-pipeline)** 착수 — 로드맵상 다음. 위험 로직이 이미 세 개 플래그돼 있음(job claim SKIP LOCKED·tx 경계·at-least-once, "✔✔✔"로 가장 높은 위험도). **새 프로세스대로 사용자 가치·품질 기준 질문부터 시작할 것** — 바로 선택지를 제시하지 않는다.
+- plan-04용 pre-hoc 학습 아티클(`chunking-strategy-fixed-vs-structure-vs-semantic.md`)은 이미 있음 — 착수 전에 사람이 한 번 훑어보면 좋음.
+- plan-04는 `link` 테이블에 이미 있는 `status` 상태머신(`PENDING→FETCHING→FETCHED/READY_WITHOUT_CONTENT/FAILED`)을 이어받아 `SUMMARIZED→CHUNKED→INDEXED`로 확장하게 될 것(architecture/async-pipeline.md 참고).
 
 ## 금지
 - `src/test/**/contract/**`(계약 테스트) 수정 금지 — Codex뿐 아니라 자동화 전반.
 - 학습 아티클에 최종 결정 문구를 쓰지 않는다 — 결정은 ADR에만.
+- **위험 로직·기술 선택 시 Claude가 선택지부터 제시하지 않는다** — 사용자 가치·품질 기준을 먼저 묻는다(2026-07-26 절차 개정).
 
 ---
-갱신: 2026-07-25 · 브랜치: `plan/03-safe-fetch-extract`
+갱신: 2026-07-27 · 브랜치: `main`(plan-01/02/03 전체 머지 완료 상태)
