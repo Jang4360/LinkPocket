@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
+import java.time.Instant;
 import java.util.UUID;
 
 @Service
@@ -65,5 +66,32 @@ public class LinkService {
         if (deleted == 0) {
             throw new com.linkpocket.common.error.DomainException(LinkErrorCode.LINK_NOT_FOUND);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public LinkStatusResponse status(UUID userId, UUID linkId) {
+        return jdbcTemplate.query(
+                        "select status, created_at from link where id = ? and user_id = ?",
+                        (resultSet, rowNum) -> new LinkStatusResponse(
+                                linkId,
+                                externalStatus(resultSet.getString("status")),
+                                resultSet.getObject("created_at", java.time.OffsetDateTime.class).toInstant()
+                        ),
+                        linkId, userId
+                )
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new com.linkpocket.common.error.DomainException(LinkErrorCode.LINK_NOT_FOUND));
+    }
+
+    private String externalStatus(String status) {
+        return switch (status) {
+            case "PENDING", "FETCHING" -> "QUEUED";
+            case "SUMMARIZING", "CHUNKING", "EMBEDDING" -> "PROCESSING";
+            case "INDEXED" -> "READY";
+            case "READY_WITHOUT_CONTENT", "READY_WITHOUT_INDEX" -> "READY_WITHOUT_CONTENT";
+            case "FAILED" -> "FAILED";
+            default -> "PROCESSING";
+        };
     }
 }

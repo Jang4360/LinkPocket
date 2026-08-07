@@ -20,6 +20,9 @@
 - `adr-009-ai-harness-architecture.md` — **하네스 전체 구조·철학 종합.** 개별 ADR(001~008)을 하나의 그림(4층: 컨텍스트→루프→4겹강제→자기개선)으로 잇는 문서. 큰 그림이 궁금하면 여기부터.
 - `adr-010-link-idempotent-save.md` — Link 동시 중복 저장 방지(unique constraint + 원자적 upsert)·canonical URL 정규화 범위 (plan-02 근거).
 - `adr-011-safe-fetch-ssrf-timeout-retry.md` — SSRF 방어 깊이(DNS+IP 검증, redirect 재검증)·timeout 3구간·재시도/크기 제한·중복 fetch 방지 (plan-03 근거).
+- `adr-012-async-pipeline-job-claim-and-idempotency.md` — job claim 동시성(SKIP LOCKED)·트랜잭션 경계와 lease 기반 복구·멱등성(호출 전 조회+unique constraint) (plan-04 근거).
+- `adr-013-chunking-strategy.md` — 본문 청킹 전략: 구조 보존 우선 + 고정 크기 fallback + overlap (plan-04 근거).
+- `adr-014-ai-processing-failure-exposure-and-retry.md` — AI 처리(요약·임베딩) 영구 실패의 목록 노출 방식과 재시도 가능/불가 사유 구분·상한(최대 2회) (plan-04 근거).
 
 > 개발 루프 전체(계약 우선·2에이전트·사람 게이트)는 [development-loop.md](../development-loop.md)에, 그 근거 결정들은 위 3번 범주 ADR에 있다.
 

@@ -51,6 +51,15 @@ public class LinkController {
         return ResponseEntity.ok(linkService.lookup(user.getId(), url));
     }
 
+    @GetMapping("/{linkId}/status")
+    public ResponseEntity<LinkStatusResponse> status(
+            @PathVariable UUID linkId,
+            @AuthenticationPrincipal OAuth2User principal
+    ) {
+        AppUser user = authenticatedUser(principal);
+        return ResponseEntity.ok(linkService.status(user.getId(), linkId));
+    }
+
     @DeleteMapping("/{linkId}")
     public ResponseEntity<Void> delete(
             @PathVariable UUID linkId,
