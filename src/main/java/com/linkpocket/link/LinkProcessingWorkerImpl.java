@@ -110,6 +110,10 @@ public class LinkProcessingWorkerImpl implements LinkProcessingWorker {
 
     private void summarize(ClaimedLink claim) {
         try {
+            if (isSummaryUserEdited(claim.linkId())) {
+                markSummarizedWithoutAiWrite(claim.linkId());
+                return;
+            }
             String body = extractedBody(claim.linkId());
             String inputHash = hash(body);
             String summary = existingSummary(claim.linkId(), inputHash);
@@ -118,19 +122,42 @@ public class LinkProcessingWorkerImpl implements LinkProcessingWorker {
                 summary = summaryGenerator.summarize(body);
                 saveSummary(claim.linkId(), inputHash, summary);
             }
-            jdbcTemplate.update(
+            int updated = jdbcTemplate.update(
                     """
                             update link set status = 'SUMMARIZED', processing_lease_expires_at = null,
                                 failure_reason = null, ai_summary = ?
-                            where id = ?
+                            where id = ? and summary_source = 'AI_GENERATED'
                             """,
                     summary, claim.linkId()
             );
+            if (updated == 0) {
+                markSummarizedWithoutAiWrite(claim.linkId());
+            }
         } catch (AiProcessingException exception) {
             handleAiFailure(claim, exception);
         } catch (RuntimeException exception) {
             handleAiFailure(claim, new AiProcessingException("CHUNKING_FAILED", false));
         }
+    }
+
+    private boolean isSummaryUserEdited(UUID linkId) {
+        String source = jdbcTemplate.queryForObject(
+                "select summary_source from link where id = ?",
+                String.class,
+                linkId
+        );
+        return "USER_EDITED".equals(source);
+    }
+
+    private void markSummarizedWithoutAiWrite(UUID linkId) {
+        jdbcTemplate.update(
+                """
+                        update link set status = 'SUMMARIZED', processing_lease_expires_at = null,
+                            failure_reason = null
+                        where id = ? and summary_source = 'USER_EDITED'
+                        """,
+                linkId
+        );
     }
 
     private void chunk(ClaimedLink claim) {

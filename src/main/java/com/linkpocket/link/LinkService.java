@@ -12,10 +12,12 @@ import java.util.UUID;
 public class LinkService {
 
     private final JdbcTemplate jdbcTemplate;
+    private final LinkCategoryService linkCategoryService;
     private final CanonicalUrlNormalizer canonicalUrlNormalizer = new CanonicalUrlNormalizer();
 
-    public LinkService(JdbcTemplate jdbcTemplate) {
+    public LinkService(JdbcTemplate jdbcTemplate, LinkCategoryService linkCategoryService) {
         this.jdbcTemplate = jdbcTemplate;
+        this.linkCategoryService = linkCategoryService;
     }
 
     /**
@@ -26,7 +28,8 @@ public class LinkService {
     @Transactional
     public LinkSaveResponse save(UUID userId, String rawUrl) {
         String canonicalUrl = canonicalUrlNormalizer.normalize(rawUrl);
-        return jdbcTemplate.queryForObject(
+        UUID uncategorizedId = linkCategoryService.ensureUncategorized(userId);
+        LinkSaveResponse response = jdbcTemplate.queryForObject(
                 """
                         insert into link (id, user_id, url, canonical_url, status, created_at)
                         values (gen_random_uuid(), ?, ?, ?, 'PENDING', now())
@@ -42,6 +45,8 @@ public class LinkService {
                 ),
                 userId, rawUrl, canonicalUrl
         );
+        linkCategoryService.ensureDefaultAssignment(response.linkId(), uncategorizedId);
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -76,6 +81,51 @@ public class LinkService {
                                 linkId,
                                 externalStatus(resultSet.getString("status")),
                                 resultSet.getObject("created_at", java.time.OffsetDateTime.class).toInstant()
+                        ),
+                        linkId, userId
+                )
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new com.linkpocket.common.error.DomainException(LinkErrorCode.LINK_NOT_FOUND));
+    }
+
+    @Transactional
+    public LinkEditResponse edit(UUID userId, UUID linkId, LinkEditRequest request) {
+        if (request.title() == null && request.summary() == null) {
+            return loadEditResponse(userId, linkId);
+        }
+
+        StringBuilder query = new StringBuilder("update link set ");
+        java.util.List<Object> arguments = new java.util.ArrayList<>();
+        if (request.title() != null) {
+            query.append("extracted_title = ?, title_source = 'USER_EDITED'");
+            arguments.add(request.title());
+        }
+        if (request.summary() != null) {
+            if (!arguments.isEmpty()) {
+                query.append(", ");
+            }
+            query.append("ai_summary = ?, summary_source = 'USER_EDITED'");
+            arguments.add(request.summary());
+        }
+        query.append(" where id = ? and user_id = ?");
+        arguments.add(linkId);
+        arguments.add(userId);
+
+        int updated = jdbcTemplate.update(query.toString(), arguments.toArray());
+        if (updated == 0) {
+            throw new com.linkpocket.common.error.DomainException(LinkErrorCode.LINK_NOT_FOUND);
+        }
+        return loadEditResponse(userId, linkId);
+    }
+
+    private LinkEditResponse loadEditResponse(UUID userId, UUID linkId) {
+        return jdbcTemplate.query(
+                        "select extracted_title, ai_summary from link where id = ? and user_id = ?",
+                        (resultSet, rowNum) -> new LinkEditResponse(
+                                linkId,
+                                resultSet.getString("extracted_title"),
+                                resultSet.getString("ai_summary")
                         ),
                         linkId, userId
                 )
