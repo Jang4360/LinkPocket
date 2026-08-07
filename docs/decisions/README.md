@@ -23,6 +23,7 @@
 - `adr-012-async-pipeline-job-claim-and-idempotency.md` — job claim 동시성(SKIP LOCKED)·트랜잭션 경계와 lease 기반 복구·멱등성(호출 전 조회+unique constraint) (plan-04 근거).
 - `adr-013-chunking-strategy.md` — 본문 청킹 전략: 구조 보존 우선 + 고정 크기 fallback + overlap (plan-04 근거).
 - `adr-014-ai-processing-failure-exposure-and-retry.md` — AI 처리(요약·임베딩) 영구 실패의 목록 노출 방식과 재시도 가능/불가 사유 구분·상한(최대 2회) (plan-04 근거).
+- `adr-015-category-deletion-and-correction-overwrite.md` — 카테고리 삭제 전파(연결만 해제+"카테고리 없음" 자동 재분류)·AI 보정의 사용자 수정 보존(source 컬럼+원자적 조건부 UPDATE) (plan-05 근거).
 
 > 개발 루프 전체(계약 우선·2에이전트·사람 게이트)는 [development-loop.md](../development-loop.md)에, 그 근거 결정들은 위 3번 범주 ADR에 있다.
 
