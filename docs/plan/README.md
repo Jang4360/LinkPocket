@@ -33,6 +33,10 @@ Spec-Driven Development(SDD): 카카오페이 spec-kit·토스 harness 사례처
 - **선행 산출물**(설계확정안 §8: ERD·OpenAPI·상태머신)은 [architecture/](../architecture/)에 축적하며 각 plan이 참조한다.
 - **알파 종료 직후 최우선 순위(신규, 2026-07-27):** AI 비용 계측(`cost/link`)·예산 정책([operations/ai-cost-and-rate-limits.md](../operations/ai-cost-and-rate-limits.md) §1) 실제 구현 — 정책 문서는 이미 있으나 아직 plan 번호 미배정. 09-weekly-digest(P1)보다 먼저 진행한다. 착수 시 plan-NN으로 새로 계약화할 것(이 로드맵 표에 추가).
 - **`02c-offline-save-queue`(신규, 2026-07-27, 보류):** 확장 프로그램에 IndexedDB 기반 저장 명령 대기열(오프라인 저장 → 재연결 재시도 → `clientRequestId`+canonical URL로 서버 멱등 저장). plan-01b/01c와 같은 관례로 완료된 plan-02에 붙는 후속 task다. **알파 이전에 착수하지 않는다** — 이 프로젝트의 반복 원칙(HNSW·Redis·Kafka 모두 "지표 확인 후 도입")과 같은 이유로, `alpha-analytics-contract.md`의 `link_saved` 실패 이벤트로 네트워크 원인 저장 실패가 실제로 관측된 뒤 우선순위를 정한다. 09-digest와 같은 "실측 신호 대기" 카테고리.
+- **실험 스프린트(신규, 2026-07-27) — plan-05와 plan-06 사이에 낀다:**
+  - `exp-06`(SSRF 안전성 회귀)·`exp-03`(장애 주입·복구)은 plan-03/04만 있으면 되고 인프라 의존이 없어 **지금(plan-05와 병행) 바로 시작**한다.
+  - `exp-01`(DB pool)·`exp-02`(worker capacity)·`exp-05`(AI latency·비용 메커닉)는 실제 OCI 배포가 선행조건이라 **plan-05가 머지된 직후, plan-06(검색) 착수 전**에 진행한다: OCI에 1인스턴스로 실험용 최소 배포 → 이 배포에서 exp-01→02→05 순서로 실행(이 1인스턴스가 동시에 `exp-07`의 baseline이 된다, 배포를 두 번 안 해도 됨) → worker profile 조건부 설정(기술스택.md 2-15 "미해결" 항목) 구현 후 2인스턴스로 전환 → `exp-07`(인스턴스 격리) after 측정.
+  - 알파 배포 위상(1 vs 2인스턴스)은 exp-07 결과로 최종 확정한다. plan-06(검색) 착수는 이 실험 스프린트가 끝난 뒤.
 
 ## 계획 전 필수 — 위험 로직은 사람과 먼저 합의한다
 
