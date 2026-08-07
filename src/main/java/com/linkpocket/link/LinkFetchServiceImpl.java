@@ -2,6 +2,7 @@ package com.linkpocket.link;
 
 import jakarta.annotation.PreDestroy;
 import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.DnsResolver;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
@@ -22,7 +23,9 @@ import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -42,6 +45,7 @@ public class LinkFetchServiceImpl implements LinkFetchService {
     private final int connectTimeoutMillis;
     private final int responseTimeoutMillis;
     private final int readTimeoutMillis;
+    private final PinnedDnsResolver dnsResolver;
     private final PoolingHttpClientConnectionManager connectionManager;
     private final CloseableHttpClient httpClient;
 
@@ -50,7 +54,8 @@ public class LinkFetchServiceImpl implements LinkFetchService {
             @Value("${linkpocket.fetch.ssrf.allowed-test-hosts:}") String allowedTestHosts,
             @Value("${linkpocket.fetch.timeout.connect-ms:3000}") int connectTimeoutMillis,
             @Value("${linkpocket.fetch.timeout.response-ms:5000}") int responseTimeoutMillis,
-            @Value("${linkpocket.fetch.timeout.read-ms:15000}") int readTimeoutMillis
+            @Value("${linkpocket.fetch.timeout.read-ms:15000}") int readTimeoutMillis,
+            DnsResolver dnsResolver
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.allowedTestHosts = Arrays.stream(allowedTestHosts.split(","))
@@ -60,7 +65,9 @@ public class LinkFetchServiceImpl implements LinkFetchService {
         this.connectTimeoutMillis = connectTimeoutMillis;
         this.responseTimeoutMillis = responseTimeoutMillis;
         this.readTimeoutMillis = readTimeoutMillis;
+        this.dnsResolver = new PinnedDnsResolver(dnsResolver, this.allowedTestHosts);
         this.connectionManager = PoolingHttpClientConnectionManagerBuilder.create()
+                .setDnsResolver(this.dnsResolver)
                 .setDefaultSocketConfig(org.apache.hc.core5.http.io.SocketConfig.custom()
                         .setSoTimeout(Timeout.ofMilliseconds(readTimeoutMillis))
                         .build())
@@ -119,47 +126,55 @@ public class LinkFetchServiceImpl implements LinkFetchService {
     }
 
     private FetchedPage fetchOnce(URI initialUri) throws FetchException {
-        URI currentUri = initialUri;
-        for (int redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
-            assertSafeTarget(currentUri);
-            try {
-                ClassicHttpResponse response = httpClient.executeOpen(null,
-                        new org.apache.hc.client5.http.classic.methods.HttpGet(currentUri), null);
-                try (response) {
-                    int status = response.getCode();
-                    if (isRedirect(status)) {
-                        Header location = response.getFirstHeader("Location");
-                        EntityUtils.consumeQuietly(response.getEntity());
-                        if (location == null) {
+        dnsResolver.clear();
+        try {
+            URI currentUri = initialUri;
+            for (int redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
+                assertSafeTarget(currentUri);
+                try {
+                    ClassicHttpResponse response = httpClient.executeOpen(null,
+                            new org.apache.hc.client5.http.classic.methods.HttpGet(currentUri), null);
+                    try (response) {
+                        int status = response.getCode();
+                        if (isRedirect(status)) {
+                            Header location = response.getFirstHeader("Location");
+                            EntityUtils.consumeQuietly(response.getEntity());
+                            if (location == null) {
+                                throw new FetchException(FetchFailureReason.HTTP_CLIENT_ERROR, false);
+                            }
+                            currentUri = currentUri.resolve(location.getValue());
+                            continue;
+                        }
+                        if (status == 429 || status >= 500) {
+                            throw new FetchException(FetchFailureReason.HTTP_SERVER_ERROR, true);
+                        }
+                        if (status >= 400) {
                             throw new FetchException(FetchFailureReason.HTTP_CLIENT_ERROR, false);
                         }
-                        currentUri = currentUri.resolve(location.getValue());
-                        continue;
+                        if (status < 200 || status >= 300) {
+                            throw new FetchException(FetchFailureReason.HTTP_CLIENT_ERROR, false);
+                        }
+                        if (!isHtmlContentType(response.getFirstHeader("Content-Type"))) {
+                            throw new FetchException(FetchFailureReason.UNSUPPORTED_CONTENT_TYPE, false);
+                        }
+                        return new FetchedPage(currentUri, readBody(response.getEntity().getContent()));
                     }
-                    if (status == 429 || status >= 500) {
-                        throw new FetchException(FetchFailureReason.HTTP_SERVER_ERROR, true);
-                    }
-                    if (status >= 400) {
-                        throw new FetchException(FetchFailureReason.HTTP_CLIENT_ERROR, false);
-                    }
-                    if (status < 200 || status >= 300) {
-                        throw new FetchException(FetchFailureReason.HTTP_CLIENT_ERROR, false);
-                    }
-                    if (!isHtmlContentType(response.getFirstHeader("Content-Type"))) {
-                        throw new FetchException(FetchFailureReason.UNSUPPORTED_CONTENT_TYPE, false);
-                    }
-                    return new FetchedPage(currentUri, readBody(response.getEntity().getContent()));
-                }
-            } catch (SocketTimeoutException exception) {
-                throw new FetchException(FetchFailureReason.FETCH_TIMEOUT, true);
-            } catch (IOException exception) {
-                if (hasTimeoutCause(exception)) {
+                } catch (SocketTimeoutException exception) {
                     throw new FetchException(FetchFailureReason.FETCH_TIMEOUT, true);
+                } catch (IOException exception) {
+                    if (hasBlockedAddressCause(exception)) {
+                        throw new FetchException(FetchFailureReason.SSRF_BLOCKED, false);
+                    }
+                    if (hasTimeoutCause(exception)) {
+                        throw new FetchException(FetchFailureReason.FETCH_TIMEOUT, true);
+                    }
+                    throw new FetchException(FetchFailureReason.HTTP_SERVER_ERROR, true);
                 }
-                throw new FetchException(FetchFailureReason.HTTP_SERVER_ERROR, true);
             }
+            throw new FetchException(FetchFailureReason.HTTP_CLIENT_ERROR, false);
+        } finally {
+            dnsResolver.clear();
         }
-        throw new FetchException(FetchFailureReason.HTTP_CLIENT_ERROR, false);
     }
 
     @PreDestroy
@@ -192,34 +207,13 @@ public class LinkFetchServiceImpl implements LinkFetchService {
         if (allowedTestHosts.contains(host)) {
             return;
         }
-
         try {
-            for (InetAddress address : InetAddress.getAllByName(host)) {
-                if (isBlockedAddress(address)) {
-                    throw new FetchException(FetchFailureReason.SSRF_BLOCKED, false);
-                }
-            }
+            dnsResolver.resolve(host);
+        } catch (SafeDnsResolver.BlockedAddressException exception) {
+            throw new FetchException(FetchFailureReason.SSRF_BLOCKED, false);
         } catch (UnknownHostException exception) {
             throw new FetchException(FetchFailureReason.HTTP_CLIENT_ERROR, false);
         }
-    }
-
-    private boolean isBlockedAddress(InetAddress address) {
-        if (address.isAnyLocalAddress() || address.isLoopbackAddress()
-                || address.isLinkLocalAddress() || address.isSiteLocalAddress()) {
-            return true;
-        }
-        byte[] bytes = address.getAddress();
-        if (bytes.length != 4) {
-            return false;
-        }
-        int first = Byte.toUnsignedInt(bytes[0]);
-        int second = Byte.toUnsignedInt(bytes[1]);
-        return first == 10
-                || first == 127
-                || (first == 172 && second >= 16 && second <= 31)
-                || (first == 192 && second == 168)
-                || (first == 169 && second == 254);
     }
 
     private boolean isRedirect(int status) {
@@ -243,6 +237,60 @@ public class LinkFetchServiceImpl implements LinkFetchService {
             current = current.getCause();
         }
         return false;
+    }
+
+    private boolean hasBlockedAddressCause(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof SafeDnsResolver.BlockedAddressException) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    private static final class PinnedDnsResolver implements DnsResolver {
+
+        private final DnsResolver delegate;
+        private final Set<String> allowedHosts;
+        private final ThreadLocal<Map<String, InetAddress[]>> resolvedAddresses =
+                ThreadLocal.withInitial(HashMap::new);
+
+        private PinnedDnsResolver(DnsResolver delegate, Set<String> allowedHosts) {
+            this.delegate = delegate;
+            this.allowedHosts = allowedHosts;
+        }
+
+        @Override
+        public InetAddress[] resolve(String host) throws UnknownHostException {
+            String normalizedHost = host.toLowerCase(Locale.ROOT);
+            Map<String, InetAddress[]> addressesByHost = resolvedAddresses.get();
+            InetAddress[] cached = addressesByHost.get(normalizedHost);
+            if (cached != null) {
+                return cached;
+            }
+
+            InetAddress[] resolved = delegate.resolve(host);
+            if (!allowedHosts.contains(host)) {
+                for (InetAddress address : resolved) {
+                    if (SafeDnsResolver.isBlockedAddress(address)) {
+                        throw new SafeDnsResolver.BlockedAddressException(host);
+                    }
+                }
+            }
+            addressesByHost.put(normalizedHost, resolved);
+            return resolved;
+        }
+
+        @Override
+        public String resolveCanonicalHostname(String host) throws UnknownHostException {
+            return delegate.resolveCanonicalHostname(host);
+        }
+
+        private void clear() {
+            resolvedAddresses.remove();
+        }
     }
 
     private void backoff(int attempt) {
