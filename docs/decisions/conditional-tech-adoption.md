@@ -48,6 +48,7 @@
 | JVM/DB warm-up | 배포 직후와 Neon suspend 후 지연을 분리 측정해 JVM class loading/JIT가 SLO 위반 원인으로 확인 | startup probe, lazy path 제거, DB reconnect·query 개선 | 인위적 warm-up 미도입 |
 | tcpdump | app log/metric에서 timeout과 reset·retransmission을 구분 불가 | structured error, HTTP client metric, Toxiproxy | LAB만 수행하거나 생략 |
 | SSE/Netty | 사용자가 진행 상태를 실시간으로 봐야 하고 polling 비용·지연이 문제 | polling, 짧은 long-poll | 미도입 |
+| Caffeine 기반 domain별 fetch 동시성 제한 | 동일 도메인에 fetch가 짧은 시간에 몰려 상대 서버 429/과부하를 유발하거나, unbounded in-memory map으로 메모리 누수 우려가 실측됨 | worker 동시성 자체 상한(전역)만으로 시작, 필요 시 고정 크기 semaphore map | 미도입, worker 전역 동시성 상한 유지 |
 | R0~R4 전체 실행 위험 등급 체계 | staging/production 환경이 실제로 생겨 R2·R3 대상이 존재할 때 | 지금은 [development-loop.md](../development-loop.md) STOP CONDITIONS로 충분 | 등급 체계 미도입, STOP CONDITIONS만 유지 |
 | `verify.sh` `--fast`/`--full` 분리 + pre-commit | 계약 테스트 스위트가 커져 pre-push/CI 지연이 실제 마찰이 됨(체감 대기시간 측정) | 지금은 단일 `verify.sh` + pre-push만 | 단일 verify.sh 유지 |
 | `deploy.yml`(배포 파이프라인) | staging URL·immutable artifact·rollback 대상·production 승인자가 확정됨 | [release-checklist.md](../release-checklist.md)를 운영 기준으로 유지 | deploy.yml 미도입 |

@@ -31,6 +31,8 @@ Spec-Driven Development(SDD): 카카오페이 spec-kit·토스 harness 사례처
 
 - **조정 여지:** 04가 커지면 `04a-summary`/`04b-embed-index`로 분할, 08은 06에 흡수 가능.
 - **선행 산출물**(설계확정안 §8: ERD·OpenAPI·상태머신)은 [architecture/](../architecture/)에 축적하며 각 plan이 참조한다.
+- **알파 종료 직후 최우선 순위(신규, 2026-07-27):** AI 비용 계측(`cost/link`)·예산 정책([operations/ai-cost-and-rate-limits.md](../operations/ai-cost-and-rate-limits.md) §1) 실제 구현 — 정책 문서는 이미 있으나 아직 plan 번호 미배정. 09-weekly-digest(P1)보다 먼저 진행한다. 착수 시 plan-NN으로 새로 계약화할 것(이 로드맵 표에 추가).
+- **`02c-offline-save-queue`(신규, 2026-07-27, 보류):** 확장 프로그램에 IndexedDB 기반 저장 명령 대기열(오프라인 저장 → 재연결 재시도 → `clientRequestId`+canonical URL로 서버 멱등 저장). plan-01b/01c와 같은 관례로 완료된 plan-02에 붙는 후속 task다. **알파 이전에 착수하지 않는다** — 이 프로젝트의 반복 원칙(HNSW·Redis·Kafka 모두 "지표 확인 후 도입")과 같은 이유로, `alpha-analytics-contract.md`의 `link_saved` 실패 이벤트로 네트워크 원인 저장 실패가 실제로 관측된 뒤 우선순위를 정한다. 09-digest와 같은 "실측 신호 대기" 카테고리.
 
 ## 계획 전 필수 — 위험 로직은 사람과 먼저 합의한다
 

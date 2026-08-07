@@ -14,6 +14,11 @@
 |---|---|---|
 | Runbook | `runbook-제목.md` | 반복 운영 절차가 생길 때 (배포·rollback, 삭제 전파, 수집 중단 요청, 이용자 권리 대응) |
 | 정기 회고 | `retro-48h.md`, `retro-2w.md`, `retro-2m.md`, `retro-week-N.md` | 출시 후 48시간·2주·2개월·매주 (사용자 피드백, 실패 URL 유형, 비용, false alert, 품질 회귀 집계) |
+| 알파 분석 계약 | `alpha-analytics-contract.md` | 알파(Disquiet) 출시 착수 시 — 이벤트 정의·분모/분자·중복제거·PII 제외 기준. `observability-slo-kpi.md` §3의 KPI 정의를 재정의하지 않고 그대로 참조 |
+| 알파 피드백 루프 | `alpha-feedback-loop.md` | 알파 출시 착수 시 — 모집 문구, 피드백 수집, 사용자 요청→문제 발제→릴리스 흐름 |
+| 릴리스·rollback 증거 | `release-and-rollback-evidence.md` | 첫 배포 파이프라인 구성 또는 plan-06 완료 시점(알파 출시 직전) |
+
+**착수할 때:** [evidence/README.md](../evidence/README.md)의 Implemented/Observed/Proposed 구분·raw artifact 원칙을 따른다.
 
 > **정기 회고 vs postmortem:** 정기 회고는 사건과 무관한 **주기적 건강검진**(여기). postmortem은 **개별 장애 한 건**의 원인·재발 방지([postmortems/](../postmortems/)).
 

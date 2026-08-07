@@ -25,3 +25,9 @@
 | 실험 | 상태 | 관련 축 |
 |---|---|---|
 | [exp-01 · 커넥션 풀 상한(부하로 DB 포화점)](exp-01-connection-pool-sizing/README.md) | 계획 | C(pool·transaction) + G(k6) |
+| exp-02 · worker capacity·backpressure(job claim·lease·재시도 값의 부하 검증) | 미작성(착수 전) | E(비동기) + G(k6). exp-01과 DB pool 부분 중복 금지 — exp-01을 참조하고 worker claim·polling·AI 호출만 다룬다. lease 30s·재시도 2회(ADR-012/014)는 재질문 대상이 아니라 **부하 하에서 그 값이 맞는지 검증하는 대상**이다 |
+| exp-03 · fault injection·recovery(Toxiproxy/WireMock 장애 주입) | 미작성(착수 전) | D(외부 수집) + E(비동기). 계획된 실험이라 postmortems/(실제 장애)와 다르다 |
+| exp-04 · retrieval quality(golden set·Recall@5·MRR@10) | 미작성(착수 전, 우선순위 낮음) | F(검색 품질). **알파 사용자 데이터 확보 후 golden set 방식부터 정한다** — 지금 합성 데이터로 만들지 않는다 |
+| exp-05 · AI cost·quality(generation 단위 비용·품질 계측) | 미작성(착수 전) | F+운영. plan/README.md의 "알파 종료 직후 최우선" AI 비용 작업의 측정 절반 |
+
+**새 실험 문서를 착수할 때:** [evidence/README.md](../evidence/README.md)의 Implemented/Observed/Proposed 구분과 raw artifact 원칙을 그대로 따른다. 가설·조건만 먼저 채우고 결과는 실행 전 비워둔다.
