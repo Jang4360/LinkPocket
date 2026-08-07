@@ -26,11 +26,18 @@
 - `experiments/README.md`·`operations/README.md`에 exp-02~05·alpha-analytics-contract·alpha-feedback-loop·release-and-rollback-evidence를 "착수 시 작성" 백로그로 등록(파일은 아직 없음).
 - `conditional-tech-adoption.md`에 Caffeine domain-concurrency 항목 추가.
 
+## plan-05(categories) — 완전히 완료·머지 (PR #27 계약, #29 구현, #28 관련 문서)
+- [ADR-015](../decisions/adr-015-category-deletion-and-correction-overwrite.md) — 카테고리 삭제=연결 해제만(Link 보존)+ON DELETE CASCADE+"카테고리 없음" 자동 재분류(상호 배타), title/summary 사용자 수정 보존(`title_source`/`summary_source`+원자적 조건부 UPDATE, plan-01/03/04 재사용 패턴).
+- `CategoryService`/`CategoryController`(CRUD·시스템 카테고리 보호·중복 이름 거부) + `LinkCategoryService`(상호 배타 유지) + `LinkService.save` 확장(기본 카테고리 없음 연결) + `PATCH /api/links/{id}`(title/summary 수정) + V8 마이그레이션. 리뷰에서 버그 0건(plan-04와 대조적).
+- **PR #27 CI가 계속 fail했던 이유가 있었음**: `plan/05-categories`(계약+테스트만, red)는 구현이 없어 CI가 절대 통과할 수 없는 게 정상 — #29(구현, #27 커밋 포함)의 base를 `main`으로 재타겟해 한 번에 머지하는 방식으로 해결. 앞으로도 "계약 테스트만 있는 plan 브랜치"에 CI green을 기대하면 안 된다는 걸 기록해둔다.
+- 로드맵에 "실험 스프린트"(plan-05~06 사이) 추가: exp-06(SSRF 회귀)·exp-03(장애 주입)은 로컬, exp-01→02→05→07(before/after)은 OCI 1인스턴스 실험 배포 하나로 진행. `기술스택.md` 2-15에 모노레포 유지 근거(ADR-001 연장) 명시.
+
 ## 미완료
-- 없음 — plan-01~04 전부 완료·머지, 문서 개정 PR도 머지 완료(2026-07-27 기준).
+- **실험 스프린트 미착수** — exp-06·exp-03(로컬, plan-06 착수 전 아무 때나)와 exp-01/02/05/07(OCI 1인스턴스 배포 필요)이 plan/README.md에 계획만 돼 있고 실행된 게 없음.
 
 ## 다음 시작점
-- **로드맵상 다음은 plan-05-categories**(카테고리 CRUD·다중 분류·제목/요약/분류 보정+재색인, 의존: 02). 위험 로직 플래그 있음("✔ 삭제=연결해제·보정 no-overwrite") — 착수 전 plan/README.md 절차대로 Claude가 먼저 질문(선택지 없이)부터 시작할 것.
+- **실험 스프린트 착수**: 1) exp-06(SSRF 안전성 회귀)·exp-03(장애 주입·복구) 로컬로 먼저. 2) OCI에 1인스턴스 실험용 최소 배포 → exp-01(DB pool)→exp-02(worker capacity)→exp-05(AI latency·비용 메커닉) → worker profile 조건부 설정 구현 → 2인스턴스 전환 → exp-07(인스턴스 격리 before/after). 이 결과로 알파 배포 위상(1 vs 2인스턴스) 확정.
+- 그 다음이 **plan-06-archive-and-search**(의존: 04,05) — 위험 로직 "✔ tenant filter 서버 강제" 플래그 있음, 착수 전 plan/README.md 절차 따를 것.
 
 ## 금지
 - `src/test/**/contract/**`(계약 테스트) 수정 금지 — Codex뿐 아니라 자동화 전반.
