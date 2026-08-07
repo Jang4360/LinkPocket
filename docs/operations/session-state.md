@@ -32,11 +32,18 @@
 - **PR #27 CI가 계속 fail했던 이유가 있었음**: `plan/05-categories`(계약+테스트만, red)는 구현이 없어 CI가 절대 통과할 수 없는 게 정상 — #29(구현, #27 커밋 포함)의 base를 `main`으로 재타겟해 한 번에 머지하는 방식으로 해결. 앞으로도 "계약 테스트만 있는 plan 브랜치"에 CI green을 기대하면 안 된다는 걸 기록해둔다.
 - 로드맵에 "실험 스프린트"(plan-05~06 사이) 추가: exp-06(SSRF 회귀)·exp-03(장애 주입)은 로컬, exp-01→02→05→07(before/after)은 OCI 1인스턴스 실험 배포 하나로 진행. `기술스택.md` 2-15에 모노레포 유지 근거(ADR-001 연장) 명시.
 
+## exp-06(SSRF 안전성 회귀) — 완료, 실험이 아니라 긴급 보안 수정으로 전환 (PR #31)
+- corpus 설계 중 `LinkFetchServiceImpl` 재검토로 **확정된 보안 결함 2건**을 코드만으로 발견: ① DNS rebinding(TOCTOU) — 검증용 DNS 조회와 실제 연결용 DNS 조회가 분리돼 있어 두 조회가 다른 답을 주면(공인 IP→사설 IP) 뚫림. ② IPv6 미검사 — `isBlockedAddress`가 4바이트(IPv4)만 보고 IPv6(16바이트)는 무조건 통과.
+- 실험 대신 즉시 수정: `SafeDnsResolver`(신규) + `PinnedDnsResolver`(내부 클래스, hostname당 `fetchOnce` 1회 조회를 `ThreadLocal`로 캐싱해 검증·연결이 항상 같은 조회 결과를 쓰게 구조적으로 통합) + IPv6 loopback·link-local·unique-local(`fc00::/7`) 차단 + 미확인 주소 길이 fail-closed.
+- `LinkFetchSsrfAdvancedContractTest`(영구 계약 테스트, 4건 red→green 확인 + 다중 hop redirect 체인 1건은 이미 안전해서 처음부터 green) — exp-06이 원래 하려던 "corpus 기반 회귀 검증"을 이 계약 테스트가 영구히 담당.
+- `mistake-ledger`에 `adr-implementation-drift` 2회째 기록(승격 후보, 3회째면 skill/hook 승격).
+
 ## 미완료
-- **실험 스프린트 미착수** — exp-06·exp-03(로컬, plan-06 착수 전 아무 때나)와 exp-01/02/05/07(OCI 1인스턴스 배포 필요)이 plan/README.md에 계획만 돼 있고 실행된 게 없음.
+- **실험 스프린트 남은 것** — exp-03(장애 주입·복구, 로컬, plan-06 착수 전 아무 때나)과 exp-01/02/05/07(OCI 1인스턴스 배포 필요)이 plan/README.md에 계획만 돼 있고 실행된 게 없음.
 
 ## 다음 시작점
-- **실험 스프린트 착수**: 1) exp-06(SSRF 안전성 회귀)·exp-03(장애 주입·복구) 로컬로 먼저. 2) OCI에 1인스턴스 실험용 최소 배포 → exp-01(DB pool)→exp-02(worker capacity)→exp-05(AI latency·비용 메커닉) → worker profile 조건부 설정 구현 → 2인스턴스 전환 → exp-07(인스턴스 격리 before/after). 이 결과로 알파 배포 위상(1 vs 2인스턴스) 확정.
+- **exp-03(장애 주입·복구) 착수** — 로컬, Toxiproxy/WireMock으로 URL timeout·429·OpenAI 5xx·worker 중단+lease 만료 복구·DB connection 제한 재현. plan-06 착수 전에 끝낼 것.
+- 그다음 OCI에 1인스턴스 실험용 최소 배포 → exp-01(DB pool)→exp-02(worker capacity)→exp-05(AI latency·비용 메커닉) → worker profile 조건부 설정 구현(기술스택.md 2-15 "미해결" 항목) → 2인스턴스 전환 → exp-07(인스턴스 격리 before/after). 이 결과로 알파 배포 위상(1 vs 2인스턴스) 확정.
 - 그 다음이 **plan-06-archive-and-search**(의존: 04,05) — 위험 로직 "✔ tenant filter 서버 강제" 플래그 있음, 착수 전 plan/README.md 절차 따를 것.
 
 ## 금지
